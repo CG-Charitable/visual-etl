@@ -1,0 +1,17 @@
+node_modules/*
+auth.json
+package-lock.json
+google/*.json
+tools/googleapi/*.json
+.env
+generated/*
+dist/*
+.DS_Store
+.claud/*
+.vscode/*
+.idea/*
+*.log
+/tools/generated
+/uploads
+/public/tool
+/frontend/node_modules

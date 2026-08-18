@@ -1,0 +1,1496 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../tools/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model AdminOrgAssignment {
+  id             String       @id
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime
+  userId         String
+  organizationId String
+  Organization   Organization @relation(fields: [organizationId], references: [id])
+  User           User         @relation(fields: [userId], references: [id])
+}
+
+model Beneficiaries {
+  id             String       @id
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime
+  organizationId String
+  programId      String
+  Gender         String?
+  Age            String?
+  Count          Int?
+  Organization   Organization @relation(fields: [organizationId], references: [id])
+  Program        Program      @relation(fields: [programId], references: [id])
+}
+
+model BeneficiaryAgeName {
+  id             String       @id
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime
+  organizationId String
+  dataRequestId  String
+  AgeKey         String
+  AgeName        String?
+  DataRequest    DataRequest  @relation(fields: [dataRequestId], references: [id])
+  Organization   Organization @relation(fields: [organizationId], references: [id])
+}
+
+model BeneficiaryUnique {
+  id             String       @id
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime
+  organizationId String
+  dataRequestId  String
+  Gender         String?
+  Age            String?
+  Count          Int?
+  DataRequest    DataRequest  @relation(fields: [dataRequestId], references: [id])
+  Organization   Organization @relation(fields: [organizationId], references: [id])
+}
+
+model CountryCodes {
+  id        String   @id
+  createdAt DateTime @default(now())
+  updatedAt DateTime
+  country   String   @unique
+  code      String
+  type      String
+}
+
+model CountryOfOperation {
+  id             String          @id
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime
+  organizationId String
+  Name           String?
+  dataRequestId  String
+  ServiceArea    String?
+  DataRequest    DataRequest     @relation(fields: [dataRequestId], references: [id])
+  Organization   Organization    @relation(fields: [organizationId], references: [id])
+  EntityCountry  EntityCountry[]
+  OrgCountryMap  OrgCountryMap[]
+}
+
+model DataRequest {
+  id                     String                  @id
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime
+  status                 String
+  year                   Int
+  googleSheetId          String?
+  googleSheetSensitiveId String?
+  organizationId         String
+  ContactName            String?
+  ContactTitle           String?
+  ContactPhone           String?
+  ContactPhoneType       String?
+  ContactEmail           String?
+  CheckAddr              String?
+  CheckAddrChange        Boolean?
+  LegalEntitiesNo        Int?
+  CountriesNo            Int?
+  GenMission             String?
+  GenMissionChangeYN     Boolean?
+  GenMissionChanges      String?
+  GenAnnualReport        DateTime?
+  GenHandbook            String?
+  GenOverallComments     String?
+  GenVignette            String?
+  GenCharacter           String?
+  GenProgramNum          Int?
+  VulMatrixConf          String?
+  ExplainFundRatio       String?
+  ExplainCashOnHand      String?
+  ExplainSupportRatio    String?
+  ExplainPL              String?
+  approved               String?
+  currentOrNew           String                  @default("Current")
+  isEditable             Boolean                 @default(false)
+  CorrEx                 String?
+  CorrYN                 Boolean?
+  FutProgCom             String?
+  progressSnapshot       Json?
+  importedAt             DateTime?
+  BeneficiaryAgeName     BeneficiaryAgeName[]
+  BeneficiaryUnique      BeneficiaryUnique[]
+  CountryOfOperation     CountryOfOperation[]
+  Organization           Organization            @relation(fields: [organizationId], references: [id])
+  Donor                  Donor[]
+  Employee               Employee[]
+  Entity                 Entity[]
+  EntityCountry          EntityCountry[]
+  FormComment            FormComment[]
+  FutureEstimate         FutureEstimate[]
+  FutureEstimateComment  FutureEstimateComment[]
+  FutureEstimatePay      FutureEstimatePay[]
+  FutureEstimateProgram  FutureEstimateProgram[]
+  ImportIssue            ImportIssue[]
+  Partner                Partner[]
+  Program                Program[]
+  Volunteer              Volunteer[]
+  Vulnerabilities        Vulnerabilities[]
+  VulnerabilityFactor    VulnerabilityFactor[]
+}
+
+model Donor {
+  id             String       @id
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime
+  organizationId String
+  dataRequestId  String
+  Name           String
+  Country        String?
+  Email          String?
+  DataRequest    DataRequest  @relation(fields: [dataRequestId], references: [id])
+  Organization   Organization @relation(fields: [organizationId], references: [id])
+}
+
+model Employee {
+  id              String           @id
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime
+  organizationId  String
+  dataRequestId   String
+  entityCountryId String?
+  EmpName         String?
+  EmpTitle        String?
+  EmpCountry      String?
+  EmpSalaryGross  Decimal?
+  EmpBen          Decimal?
+  EmpMonthsWkd    Int?
+  EmpWorkPct      Decimal?
+  EmpTopPay       Boolean?
+  EmpBottomPay    Boolean?
+  EmpCGCat        String?
+  EmpCity         String?
+  EmpWitholdings  Decimal?
+  DataRequest     DataRequest      @relation(fields: [dataRequestId], references: [id])
+  EntityCountry   EntityCountry?   @relation(fields: [entityCountryId], references: [id])
+  Organization    Organization     @relation(fields: [organizationId], references: [id])
+  OrgEmployeeMap  OrgEmployeeMap[]
+}
+
+model Entity {
+  id                           String            @id
+  createdAt                    DateTime          @default(now())
+  updatedAt                    DateTime
+  dataRequestId                String
+  organizationId               String
+  Name                         String?
+  TaxId                        String?
+  FoundYear                    Int?
+  Url                          String?
+  TopAdminName                 String?
+  TopAdminTitle                String?
+  Country                      String?
+  EntityType                   String?
+  TaxFilingReq                 Boolean?
+  OfficeAddr                   String?
+  IndieLedger                  Boolean?
+  ConsolEntity                 String?
+  TopFinName                   String?
+  TopFinTitle                  String?
+  FiscalYearEnd                DateTime?
+  FinancialsPreparer           String?
+  InsideOrOut                  String?
+  FinConflictOfIntrest         String?
+  AccountingStandards          String?
+  StatementCurrency            String?
+  FxRate                       Decimal?
+  FinStatementLanguage         String?
+  LevelOfReview                String?
+  CpaFirm                      String?
+  DateFinFinal                 DateTime?
+  DateFinSent                  DateTime?
+  FinancialFile                String?
+  DateIncorpReceived           DateTime?
+  DateBylawsReceived           DateTime?
+  TotAssetsLoc                 Decimal?
+  TotLiabLoc                   Decimal?
+  TotRevLoc                    Decimal?
+  TotExpenseLoc                Decimal?
+  TotTranInLoc                 Decimal?
+  TotTranOutLoc                Decimal?
+  TotAssetsUSD                 Decimal?
+  TotLiabUSD                   Decimal?
+  TotRevUSD                    Decimal?
+  TotExpenseUSD                Decimal?
+  TotTranInUSD                 Decimal?
+  TotTranOutUSD                Decimal?
+  AccountingBasis              String?
+  ExpenseRestrictedLoc         Decimal?
+  NetAssetsWithRestrictionsLoc Decimal?
+  TotFundraisingExpLoc         Decimal?
+  DataRequest                  DataRequest       @relation(fields: [dataRequestId], references: [id])
+  Organization                 Organization      @relation(fields: [organizationId], references: [id])
+  EntityCountry                EntityCountry[]
+  OrgEntityMap                 OrgEntityMap[]
+  ProgramByEntity              ProgramByEntity[]
+}
+
+model EntityCountry {
+  id                           String              @id
+  createdAt                    DateTime            @default(now())
+  updatedAt                    DateTime
+  organizationId               String
+  dataRequestId                String
+  entityId                     String?
+  EntityCountry                String
+  countryOfOperationId         String?
+  isConsolidation              Boolean             @default(false)
+  CGcat                        Boolean?
+  PropertiesOwned              Int?
+  DonatedSpaces                Int?
+  HCFracFund                   Decimal?
+  HCFracFin                    Decimal?
+  HCFracIT                     Decimal?
+  HCFracManage                 Decimal?
+  HCFracOtherAdmin             Decimal?
+  HCFracDirProg                Decimal?
+  HCTypeFT                     Int?
+  HCTypePT                     Int?
+  HCTypeVol                    Int?
+  HCCatBoard                   Int?
+  HCCatBoardCitizens           Int?
+  HCCatExecEmp                 Int?
+  HCCatExecVol                 Int?
+  HCCatOfficeEmp               Int?
+  HCCatOfficeVol               Int?
+  HCCatProgEmp                 Int?
+  HCCatProgVol                 Int?
+  HCCatOtherEmp                Int?
+  HCCatOtherVol                Int?
+  HCAlumEmp                    Int?
+  HCAlumVol                    Int?
+  BalTCashAndEquiv             Decimal?
+  BalTLBE                      Decimal?
+  BalTOtherAssets              Decimal?
+  BalRPermRestrict             Decimal?
+  BalRGenFunds                 Decimal?
+  BalROtherFin                 Decimal?
+  BalROtherAssets              Decimal?
+  BalLShortLiab                Decimal?
+  BalLLongLiab                 Decimal?
+  ExplainNonFinAsset           String?
+  ExplainLiab                  String?
+  TransIn                      Decimal?
+  TransOut                     Decimal?
+  Rev1InKind                   Decimal?
+  Rev1Cash                     Decimal?
+  Rev1AllOther                 Decimal?
+  Rev2OtherCountry             Decimal?
+  Rev2DomGov                   Decimal?
+  Rev2Internal                 Decimal?
+  Rev2PrivOrg                  Decimal?
+  Rev2Ind                      Decimal?
+  Rev3PermRestrict             Decimal?
+  Rev3TempRestrict             Decimal?
+  Rev3UnrestrictGift           Decimal?
+  Rev3UnrestrictOther          Decimal?
+  Rev4Sponsorship              Decimal?
+  Rev4Fundraising              Decimal?
+  Rev4Advertising              Decimal?
+  Rev4MajorGifts               Decimal?
+  Rev4TravelProg               Decimal?
+  Rev4Beneficiaries            Decimal?
+  Rev4ProgBusiness             Decimal?
+  Rev4Endowment                Decimal?
+  Rev4Investments              Decimal?
+  Rev4AllOther                 Decimal?
+  RevExplainInKind             String?
+  RevExplainOtherCntry         String?
+  RevExplainGov                String?
+  RevExplainAllOther           String?
+  ExpCompFundraise             Decimal?
+  ExpCompFin                   Decimal?
+  ExpCompIT                    Decimal?
+  ExpCompManagement            Decimal?
+  ExpCompOthAdmin              Decimal?
+  ExpCompDirProg               Decimal?
+  ExpFundSponsorship           Decimal?
+  ExpFundVolTravel             Decimal?
+  ExpFundEvents                Decimal?
+  ExpFundExtComm               Decimal?
+  ExpFundOth                   Decimal?
+  ExpFinAccting                Decimal?
+  ExpFinBanking                Decimal?
+  ExpFinInvFees                Decimal?
+  ExpFinTaxOnRev               Decimal?
+  ExpFinOth                    Decimal?
+  ExpITEquipAndMaint           Decimal?
+  ExpITSoftware                Decimal?
+  ExpITOth                     Decimal?
+  ExpOtherAdminBldOcc          Decimal?
+  ExpOtherAdminLegalHROth      Decimal?
+  ExpOtherAdminNonProgTravMeet Decimal?
+  ExpOtherAdminNonProgBiz      Decimal?
+  ExpOtherAdminMisc            Decimal?
+  ExpProgOccupancy             Decimal?
+  ExpProgDesignAndCurric       Decimal?
+  ExpProgMandE                 Decimal?
+  ExpProgCOGS                  Decimal?
+  ExpProgOPEX                  Decimal?
+  ExpProgPassThrough           Decimal?
+  ExpProgDirProg               Decimal?
+  ExpExplainUSProg             String?
+  ExpExplainPassThrough        String?
+  ExpExplainProgBiz            String?
+  ExpProgIT                    Decimal?
+  BalRTempCurrent              Decimal?
+  BalRTempLong                 Decimal?
+  BalTInvAndOtherFin           Decimal?
+  ExpExplainProgOther          String?
+  ExpRGeneral                  Decimal?
+  ExpRPerm                     Decimal?
+  ExpRTemp                     Decimal?
+  ExplainPermRestrict          String?
+  ExplainTempRestrict          String?
+  Rev2InvOtherInternal         Decimal?
+  Rev2Programs                 Decimal?
+  Rev4OtherGifts               Decimal?
+  EntityCountryExpensePercent  Decimal?
+  Employee                     Employee[]
+  CountryOfOperation           CountryOfOperation? @relation(fields: [countryOfOperationId], references: [id])
+  DataRequest                  DataRequest         @relation(fields: [dataRequestId], references: [id])
+  Entity                       Entity?             @relation(fields: [entityId], references: [id])
+  Organization                 Organization        @relation(fields: [organizationId], references: [id])
+  Property                     Property[]
+  Reconcilliation              Reconcilliation[]
+}
+
+model FormComment {
+  id            String      @id
+  createdAt     DateTime    @default(now())
+  dataRequestId String
+  tabId         Int
+  fieldKey      String?
+  text          String
+  authorName    String
+  authorEmail   String
+  DataRequest   DataRequest @relation(fields: [dataRequestId], references: [id], onDelete: Cascade)
+}
+
+model FutureEstimate {
+  id             String       @id
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime
+  organizationId String
+  dataRequestId  String
+  Year           Int
+  Type           String
+  PropOwnLease   Int?
+  PropDonated    Int?
+  FracDirProg    Decimal?
+  FracOther      Decimal?
+  AssetGenFunds  Decimal?
+  AssetFinOther  Decimal?
+  AssetAllOther  Decimal?
+  LiabShort      Decimal?
+  LiabLong       Decimal?
+  RevInKind      Decimal?
+  RevProg        Decimal?
+  RevAllOther    Decimal?
+  ExpDirProg     Decimal?
+  ExpFund        Decimal?
+  ExpAllOth      Decimal?
+  DataRequest    DataRequest  @relation(fields: [dataRequestId], references: [id])
+  Organization   Organization @relation(fields: [organizationId], references: [id])
+}
+
+model FutureEstimateComment {
+  id             String       @id
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime
+  organizationId String
+  dataRequestId  String
+  Type           String
+  PropComments   String?
+  FracComments   String?
+  AssetComments  String?
+  LiabComments   String?
+  RevComments    String?
+  ExpComments    String?
+  DataRequest    DataRequest  @relation(fields: [dataRequestId], references: [id])
+  Organization   Organization @relation(fields: [organizationId], references: [id])
+}
+
+model FutureEstimatePay {
+  id             String       @id
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime
+  organizationId String
+  dataRequestId  String
+  CYHiPayName    String?
+  CYHiPayGross   Decimal?
+  DataRequest    DataRequest  @relation(fields: [dataRequestId], references: [id])
+  Organization   Organization @relation(fields: [organizationId], references: [id])
+}
+
+model FutureEstimateProgram {
+  id             String       @id
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime
+  organizationId String
+  dataRequestId  String
+  Year           Int
+  programId      String?
+  isNewProgram   Boolean?     @default(false)
+  newProgramName String?
+  DirExp         Decimal?
+  CDU            Int?
+  DataRequest    DataRequest  @relation(fields: [dataRequestId], references: [id])
+  Organization   Organization @relation(fields: [organizationId], references: [id])
+  Program        Program?     @relation(fields: [programId], references: [id])
+}
+
+model ImportIssue {
+  id             String       @id
+  createdAt      DateTime     @default(now())
+  dataRequestId  String
+  organizationId String
+  step           String
+  message        String
+  DataRequest    DataRequest  @relation(fields: [dataRequestId], references: [id])
+  Organization   Organization @relation(fields: [organizationId], references: [id])
+}
+
+model ImportProgress {
+  id             String       @id
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime
+  year           Int
+  organizationId String
+  progress       Int
+  status         String
+  error          String?
+  Organization   Organization @relation(fields: [organizationId], references: [id])
+}
+
+model OrgCountries {
+  id             String          @id
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime
+  organizationId String
+  code           String?
+  name           String
+  aliases        String[]        @default([])
+  Organization   Organization    @relation(fields: [organizationId], references: [id])
+  OrgCountryMap  OrgCountryMap[]
+}
+
+model OrgCountryMap {
+  id                      String                   @id
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime
+  organizationId          String
+  orgCountryId            String
+  isHistorical            Boolean                  @default(false)
+  countryOfOperationId    String?
+  historicalServiceAreaId String?
+  year                    Int
+  CountryOfOperation      CountryOfOperation?      @relation(fields: [countryOfOperationId], references: [id])
+  historical_service_area historical_service_area? @relation(fields: [historicalServiceAreaId], references: [id])
+  OrgCountries            OrgCountries             @relation(fields: [orgCountryId], references: [id])
+  Organization            Organization             @relation(fields: [organizationId], references: [id])
+}
+
+model OrgEmployeeMap {
+  id                            String                         @id
+  createdAt                     DateTime                       @default(now())
+  updatedAt                     DateTime
+  organizationId                String
+  orgEmployeeId                 String
+  isHistorical                  Boolean                        @default(false)
+  employeeId                    String?
+  historicalPeopleId            String?
+  year                          Int
+  Employee                      Employee?                      @relation(fields: [employeeId], references: [id])
+  historical_people_and_partner historical_people_and_partner? @relation(fields: [historicalPeopleId], references: [id])
+  OrgEmployees                  OrgEmployees                   @relation(fields: [orgEmployeeId], references: [id])
+  Organization                  Organization                   @relation(fields: [organizationId], references: [id])
+}
+
+model OrgEmployees {
+  id             String           @id
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime
+  organizationId String
+  code           String?
+  name           String
+  aliases        String[]         @default([])
+  OrgEmployeeMap OrgEmployeeMap[]
+  Organization   Organization     @relation(fields: [organizationId], references: [id])
+}
+
+model OrgEntities {
+  id             String         @id
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime
+  organizationId String
+  code           String?
+  name           String
+  aliases        String[]       @default([])
+  Organization   Organization   @relation(fields: [organizationId], references: [id])
+  OrgEntityMap   OrgEntityMap[]
+}
+
+model OrgEntityMap {
+  id                 String             @id
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime
+  organizationId     String
+  orgEntityId        String
+  isHistorical       Boolean            @default(false)
+  entityId           String?
+  historicalEntityId String?
+  year               Int
+  Entity             Entity?            @relation(fields: [entityId], references: [id])
+  historical_entity  historical_entity? @relation(fields: [historicalEntityId], references: [id])
+  OrgEntities        OrgEntities        @relation(fields: [orgEntityId], references: [id])
+  Organization       Organization       @relation(fields: [organizationId], references: [id])
+}
+
+model OrgProgramMap {
+  id                    String                 @id
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime
+  organizationId        String
+  orgProgramId          String
+  isHistorical          Boolean                @default(false)
+  programId             String?
+  historicalProgramId   String?
+  year                  Int
+  historical_single_row historical_single_row? @relation(fields: [historicalProgramId], references: [id])
+  OrgPrograms           OrgPrograms            @relation(fields: [orgProgramId], references: [id])
+  Organization          Organization           @relation(fields: [organizationId], references: [id])
+  Program               Program?               @relation(fields: [programId], references: [id])
+}
+
+model OrgPrograms {
+  id             String          @id
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime
+  organizationId String
+  code           String?
+  name           String
+  aliases        String[]        @default([])
+  OrgProgramMap  OrgProgramMap[]
+  Organization   Organization    @relation(fields: [organizationId], references: [id])
+}
+
+model OrgProperties {
+  id               String             @id
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime
+  organizationId   String
+  code             String?
+  name             String
+  aliases          String[]           @default([])
+  Organization     Organization       @relation(fields: [organizationId], references: [id])
+  OrgPropertiesMap OrgPropertiesMap[]
+}
+
+model OrgPropertiesMap {
+  id                   String               @id
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime
+  organizationId       String
+  orgPropertyId        String
+  isHistorical         Boolean              @default(false)
+  propertyId           String?
+  historicalPropertyId String?
+  year                 Int
+  historical_property  historical_property? @relation(fields: [historicalPropertyId], references: [id])
+  OrgProperties        OrgProperties        @relation(fields: [orgPropertyId], references: [id])
+  Organization         Organization         @relation(fields: [organizationId], references: [id])
+  Property             Property?            @relation(fields: [propertyId], references: [id])
+}
+
+model Organization {
+  id                     String                  @id
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime
+  name                   String
+  govId                  String?
+  region                 String?
+  googleSheetId          String?
+  googleSheetSensitiveId String?
+  oid_type               String?
+  AdminOrgAssignment     AdminOrgAssignment[]
+  Beneficiaries          Beneficiaries[]
+  BeneficiaryAgeName     BeneficiaryAgeName[]
+  BeneficiaryUnique      BeneficiaryUnique[]
+  CountryOfOperation     CountryOfOperation[]
+  DataRequest            DataRequest[]
+  Donor                  Donor[]
+  Employee               Employee[]
+  Entity                 Entity[]
+  EntityCountry          EntityCountry[]
+  FutureEstimate         FutureEstimate[]
+  FutureEstimateComment  FutureEstimateComment[]
+  FutureEstimatePay      FutureEstimatePay[]
+  FutureEstimateProgram  FutureEstimateProgram[]
+  ImportIssue            ImportIssue[]
+  ImportProgress         ImportProgress[]
+  OrgCountries           OrgCountries[]
+  OrgCountryMap          OrgCountryMap[]
+  OrgEmployeeMap         OrgEmployeeMap[]
+  OrgEmployees           OrgEmployees[]
+  OrgEntities            OrgEntities[]
+  OrgEntityMap           OrgEntityMap[]
+  OrgProgramMap          OrgProgramMap[]
+  OrgPrograms            OrgPrograms[]
+  OrgProperties          OrgProperties[]
+  OrgPropertiesMap       OrgPropertiesMap[]
+  Partner                Partner[]
+  Program                Program[]
+  ProgramAreaMatrix      ProgramAreaMatrix[]
+  ProgramByEntity        ProgramByEntity[]
+  ProgramPopulation      ProgramPopulation[]
+  Property               Property[]
+  PropertyAllocation     PropertyAllocation[]
+  Reconcilliation        Reconcilliation[]
+  User                   User[]
+  Volunteer              Volunteer[]
+  Vulnerabilities        Vulnerabilities[]
+  VulnerabilityFactor    VulnerabilityFactor[]
+}
+
+model Partner {
+  id             String       @id
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime
+  organizationId String
+  dataRequestId  String
+  Name           String
+  Country        String?
+  Relationship   String?
+  DataRequest    DataRequest  @relation(fields: [dataRequestId], references: [id])
+  Organization   Organization @relation(fields: [organizationId], references: [id])
+}
+
+model Program {
+  id                    String                  @id
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime
+  dataRequestId         String
+  organizationId        String
+  ProgName              String?
+  StartYr               Int?
+  NextStep              String?
+  Languages             String?
+  MinProgDur            String?
+  MaxProgDur            String?
+  Photos                String?
+  ProgCDU               Int?
+  CDUsource             String?
+  CDUdesc               String?
+  ProgDirEmp            Int?
+  ProgDirVol            Int?
+  ProgDirSpend          Decimal?
+  ProgExpResPerm        Decimal?
+  SpendCat              String?
+  ProgRev               Decimal?
+  ExProgRev             String?
+  ProgRevBen            Decimal?
+  RevBenDesc            String?
+  ExInKindBen           String?
+  PartnerSupport        String?
+  ProgShortDesc         String?
+  ProgChallanges        String?
+  ProgOutcomes          String?
+  PID                   String?
+  ProgAdmissOthProg     String?
+  ProgAims              String?
+  ProgCGNotes           String?
+  ProgExpAllocations    Decimal?
+  ProgExpResTemp        Decimal?
+  ProgFocal             String?
+  ProgGroupSize         Int?
+  ProgIndAdmissDesc     String?
+  ProgIndAdmissYN       String?
+  ProgInteract          String?
+  ProgLTApply           String?
+  ProgMandE             String?
+  ProgMinor             String?
+  ProgPopApply          String?
+  ProgRubric            Int?
+  ProgSTapply           String?
+  ProgTargetPopCat      String?
+  ProgTheory            String?
+  ProgVulApply          String?
+  TargetPopDesc         String?
+  Beneficiaries         Beneficiaries[]
+  FutureEstimateProgram FutureEstimateProgram[]
+  OrgProgramMap         OrgProgramMap[]
+  DataRequest           DataRequest             @relation(fields: [dataRequestId], references: [id])
+  Organization          Organization            @relation(fields: [organizationId], references: [id])
+  ProgramAreaMatrix     ProgramAreaMatrix[]
+  ProgramByEntity       ProgramByEntity[]
+  ProgramPopulation     ProgramPopulation[]
+  PropertyAllocation    PropertyAllocation[]
+}
+
+model ProgramArea {
+  id                   String              @id
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime
+  section              String
+  category             String
+  emphasis             String
+  code                 String
+  year                 Int                 @default(2024)
+  latestEquivalentCode String?
+  genSection           String?
+  ProgramAreaMatrix    ProgramAreaMatrix[]
+
+  @@unique([code, year])
+}
+
+model ProgramAreaMatrix {
+  id             String       @id
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime
+  organizationId String
+  programId      String
+  programAreaId  String
+  Value          Decimal?
+  Organization   Organization @relation(fields: [organizationId], references: [id])
+  ProgramArea    ProgramArea  @relation(fields: [programAreaId], references: [id])
+  Program        Program      @relation(fields: [programId], references: [id])
+}
+
+model ProgramByEntity {
+  id             String       @id
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime
+  organizationId String
+  programId      String
+  entityId       String
+  Name           String
+  Pct            Decimal?
+  Entity         Entity       @relation(fields: [entityId], references: [id])
+  Organization   Organization @relation(fields: [organizationId], references: [id])
+  Program        Program      @relation(fields: [programId], references: [id])
+}
+
+model ProgramPopulation {
+  id             String       @id
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime
+  programId      String
+  Year           Int
+  Metric         String
+  NumericValue   Decimal?
+  TextValue      String?
+  organizationId String
+  Organization   Organization @relation(fields: [organizationId], references: [id])
+  Program        Program      @relation(fields: [programId], references: [id])
+}
+
+model Property {
+  id                 String               @id
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime
+  organizationId     String
+  entityCountryId    String
+  LocationName       String?
+  Longitude          Decimal?
+  Latitude           Decimal?
+  Address            String?
+  LocationSize       Decimal?
+  LocationUnits      String?
+  Title              String?
+  LocationCity       String?
+  LocationCountry    String?
+  LocationOthEx      String?
+  LocationType       String?
+  OrgPropertiesMap   OrgPropertiesMap[]
+  EntityCountry      EntityCountry        @relation(fields: [entityCountryId], references: [id])
+  Organization       Organization         @relation(fields: [organizationId], references: [id])
+  PropertyAllocation PropertyAllocation[]
+}
+
+model PropertyAllocation {
+  id             String       @id
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime
+  propertyId     String
+  programId      String?
+  IsAdmin        Boolean      @default(false)
+  Pct            Decimal?
+  IsOther        Boolean      @default(false)
+  organizationId String
+  Organization   Organization @relation(fields: [organizationId], references: [id])
+  Program        Program?     @relation(fields: [programId], references: [id])
+  Property       Property     @relation(fields: [propertyId], references: [id])
+}
+
+model Reconcilliation {
+  id              String        @id
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime
+  organizationId  String
+  entityCountryId String
+  Type            ReconType?
+  Ammount         Decimal?
+  Description     String?
+  EntityCountry   EntityCountry @relation(fields: [entityCountryId], references: [id])
+  Organization    Organization  @relation(fields: [organizationId], references: [id])
+}
+
+model User {
+  id                 String               @id
+  email              String               @unique
+  role               Role                 @default(NONE)
+  name               String?
+  organizationId     String?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime
+  AdminOrgAssignment AdminOrgAssignment[]
+  Organization       Organization?        @relation(fields: [organizationId], references: [id])
+}
+
+model Volunteer {
+  id             String       @id
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime
+  organizationId String
+  dataRequestId  String
+  VolName        String
+  VolTitle       String?
+  VolSalary      Decimal?
+  VolBen         Decimal?
+  VolSPlan       Boolean?
+  DataRequest    DataRequest  @relation(fields: [dataRequestId], references: [id])
+  Organization   Organization @relation(fields: [organizationId], references: [id])
+}
+
+model Vulnerabilities {
+  id             String       @id
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime
+  organizationId String
+  dataRequestId  String
+  Type           String?
+  Dependancy     String?
+  DollarsADay    String?
+  Count          Int?
+  DataRequest    DataRequest  @relation(fields: [dataRequestId], references: [id])
+  Organization   Organization @relation(fields: [organizationId], references: [id])
+}
+
+model VulnerabilityFactor {
+  id             String       @id
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime
+  organizationId String
+  dataRequestId  String
+  Factor         String
+  Level          String
+  Value          String?
+  DataRequest    DataRequest  @relation(fields: [dataRequestId], references: [id])
+  Organization   Organization @relation(fields: [organizationId], references: [id])
+}
+
+model historical_990 {
+  id                          String   @id
+  createdAt                   DateTime @default(now())
+  updatedAt                   DateTime
+  OID                         String?
+  EFileYN                     String?
+  TaxPeriod                   Int?
+  TaxYear                     Int?
+  File                        String?
+  Source                      String?
+  SubmissionYear              Int?
+  YearEnd                     Int?
+  ExpTotProgramServices       Decimal?
+  ExpTotAdministration        Decimal?
+  ExpTotFundraising           Decimal?
+  StatEmployeeCt              Int?
+  StatEmpAbove100k            Int?
+  StatContractorsAbove100k    Int?
+  StatOrgsSupportedCt         Int?
+  RevTot                      Decimal?
+  RevContributions            Decimal?
+  RevProgram                  Decimal?
+  RevInvestments              Decimal?
+  RevTaxExemptBonds           Decimal?
+  RevMemberDues               Decimal?
+  RevRoyalties                Decimal?
+  RevRental                   Decimal?
+  RevAssetSales               Decimal?
+  RevFundraisingGross         Decimal?
+  RevFundraisingCost          Decimal?
+  RevGaming                   Decimal?
+  RevInventorySales           Decimal?
+  RevOther                    Decimal?
+  ExpTot                      Decimal?
+  ExpUSGrantsToOrgs           Decimal?
+  ExpUSGrantsToIndividuals    Decimal?
+  ExpForeignGrants            Decimal?
+  ExpMemberBenefits           Decimal?
+  ExpOfficerComp              Decimal?
+  ExpDisqualifiedComp         Decimal?
+  ExpOthComp                  Decimal?
+  ExpPensions                 Decimal?
+  ExpOthBenefits              Decimal?
+  ExpPayrollTaxes             Decimal?
+  ExpManagementServices       Decimal?
+  ExpLegal                    Decimal?
+  ExpAccounting               Decimal?
+  ExpLobbying                 Decimal?
+  ExpFundraising              Decimal?
+  ExpInvestmentManagement     Decimal?
+  ExpOthServices              Decimal?
+  ExpAdvertisingAndPromotion  Decimal?
+  ExpOfficeExpenses           Decimal?
+  ExpIT                       Decimal?
+  ExpRoyalties                Decimal?
+  ExpOccupancy                Decimal?
+  ExpTravel                   Decimal?
+  ExpTravelPubOfficial        Decimal?
+  ExpConferences              Decimal?
+  ExpInterestPayments         Decimal?
+  ExpAffiliatePayments        Decimal?
+  ExpDepreciationAndAmort     Decimal?
+  ExpInsurance                Decimal?
+  ExpOthA                     Decimal?
+  ExpOthB                     Decimal?
+  ExpOthC                     Decimal?
+  ExpOthD                     Decimal?
+  ExpOthE                     Decimal?
+  ExpOthF                     Decimal?
+  ExpenseOpAndAdmin           Decimal?
+  AssetTot                    Decimal?
+  AssetCashNonInt             Decimal?
+  AssetCashSavings            Decimal?
+  AssetGrantsReceivable       Decimal?
+  AssetAR                     Decimal?
+  AssetOfficerReceivable      Decimal?
+  AssetDisqualifiedReceivable Decimal?
+  AssetLoansReceivable        Decimal?
+  AssetInventories            Decimal?
+  AssetPrepaidExpenses        Decimal?
+  AssetLBE                    Decimal?
+  AssetInvestmentsPublic      Decimal?
+  AssetInvestmentsOther       Decimal?
+  AssetProgramInvestments     Decimal?
+  AssetIntangible             Decimal?
+  AssetOther                  Decimal?
+  LiabAP                      Decimal?
+  LiabGrantsPayable           Decimal?
+  LiabDeferredRev             Decimal?
+  LiabTaxExemptBondLiab       Decimal?
+  LiabEscrow                  Decimal?
+  LiabOfficerPayables         Decimal?
+  LiabMortgagesSecured        Decimal?
+  LiabMortgagesUnsecured      Decimal?
+  LiabOther                   Decimal?
+  LiabTot                     Decimal?
+  NetAssetUnrestrict          Decimal?
+  NetAssetTempRestrict        Decimal?
+  NetAssetPermRestrict        Decimal?
+  NetAssetsTot                Decimal?
+  RevPlug                     Decimal?
+  ExpPlug                     Decimal?
+  AssetPlug                   Decimal?
+  LiabPlug                    Decimal?
+}
+
+model historical_beneficiary {
+  id             String   @id
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime
+  SubmissionYear Int?
+  OID            String?
+  Count          Int?
+  ProgCode       String?
+  AgeName        String?
+  Gender         String?
+  LocalAgeName   String?
+}
+
+model historical_beneficiary_unique {
+  id             String   @id
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime
+  SubmissionYear Int?
+  OID            String?
+  Gender         String?
+  Age            String?
+  Count          Int?
+}
+
+model historical_entity {
+  id                    String         @id
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime
+  SubmissionYear        Int?
+  OID                   String?
+  EntityName            String?
+  EntityType            String?
+  URL                   String?
+  Country               String?
+  TaxID                 String?
+  TaxFilingReq          String?
+  TaxFormName           String?
+  TaxAuthorityName      String?
+  TaxAccountantName     String?
+  TopAdminName          String?
+  TopAdminTitle         String?
+  TopFinName            String?
+  TopFinTitle           String?
+  FinConflictOfInterest String?
+  FinancialsPreparer    String?
+  AccountingStandards   String?
+  FinalFinDate          String?
+  FinStatementLanguage  String?
+  LevelOfReview         String?
+  ReviewName            String?
+  StatementCurrency     String?
+  FXrate                Decimal?
+  FiscalYearEnd         String?
+  OfficeAddr            String?
+  DonatedSpaces         String?
+  PropertiesOwned       String?
+  OrgEntityMap          OrgEntityMap[]
+}
+
+model historical_future_fin {
+  id                String   @id
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime
+  FcstYear          Int?
+  OID               String?
+  Source            String?
+  SubmissionYear    Int?
+  CGcat             String?
+  BalTOtherAssets   Decimal?
+  BalTInv           Decimal?
+  BalTCashAndEquiv  Decimal?
+  ExpOtherAdminMisc Decimal?
+  ExpProgDirProg    Decimal?
+  ExpFundOth        Decimal?
+  HCFracDirProg     Decimal?
+  HCFracOtherAdmin  Decimal?
+  BalLLongLiab      Decimal?
+  BalLShortLiab     Decimal?
+  DonatedSpaces     String?
+  PropertiesOwned   String?
+  Rev1AllOther      Decimal?
+  Rev1InKind        Decimal?
+  Rev1Cash          Decimal?
+}
+
+model historical_future_fin_comment {
+  id               String   @id
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime
+  SubmissionYear   Int?
+  OID              String?
+  Source           String?
+  Cgcat            String?
+  FutAssetComments String?
+  FutExpComments   String?
+  FutFracComments  String?
+  FutLiabComments  String?
+  FutPropComments  String?
+  FutRevComments   String?
+}
+
+model historical_future_program {
+  id             String   @id
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime
+  SubmissionYear Int?
+  OID            String?
+  Tab            String?
+  Year           Int?
+  ProgCode       String?
+  CDU            Int?
+  DirExp         Decimal?
+  ProgName       String?
+}
+
+model historical_org_finance {
+  id                           String   @id
+  createdAt                    DateTime @default(now())
+  updatedAt                    DateTime
+  SubmissionYear               Int?
+  OID                          String?
+  CGCat                        String?
+  LegalName                    String?
+  CountriesEncorporated        String?
+  PropertiesOwned              String?
+  DonatedSpaces                String?
+  HCCatBoard                   Int?
+  HCCatBoardCitizens           Int?
+  HCCatExecEmp                 Int?
+  HCCatExecVol                 Int?
+  HCCatOfficeEmp               Int?
+  HCCatOfficeVol               Int?
+  HCCatOtherEmp                Int?
+  HCCatOtherVol                Int?
+  HCCatProgEmp                 Int?
+  HCCatProgVol                 Int?
+  HCFracDirProg                Decimal?
+  HCFracFin                    Decimal?
+  HCFracFund                   Decimal?
+  HCFracIT                     Decimal?
+  HCFracManage                 Decimal?
+  HCFracOtherAdmin             Decimal?
+  HCTypeFT                     Int?
+  HCTypePT                     Int?
+  HCTypeVol                    Int?
+  BalTCashAndEquiv             Decimal?
+  BalTInv                      Decimal?
+  BalTLBE                      Decimal?
+  BalTOtherAssets              Decimal?
+  BalRGenFunds                 Decimal?
+  BalROtherAssets              Decimal?
+  BalROtherFin                 Decimal?
+  BalRPermRestrict             Decimal?
+  BalLLongLiab                 Decimal?
+  BalLShortLiab                Decimal?
+  RevGEvents                   Decimal?
+  RevGForignFin                Decimal?
+  RevGGov                      Decimal?
+  RevGInd                      Decimal?
+  RevGInKind                   Decimal?
+  RevGOrg                      Decimal?
+  RevIEndowment                Decimal?
+  RevIOtherFin                 Decimal?
+  RevIOthNonProg               Decimal?
+  RevPProgBiz                  Decimal?
+  RevPProgOth                  Decimal?
+  RevPSponsorship              Decimal?
+  RevPTuitionsAndFees          Decimal?
+  RevPVolTravel                Decimal?
+  ExpCompDirProg               Decimal?
+  ExpCompFin                   Decimal?
+  ExpCompFundraise             Decimal?
+  ExpCompIT                    Decimal?
+  ExpCompManagement            Decimal?
+  ExpCompOthAdmin              Decimal?
+  ExpFundEvents                Decimal?
+  ExpFundExtComm               Decimal?
+  ExpFundOth                   Decimal?
+  ExpFundSponsorship           Decimal?
+  ExpFundVolTravel             Decimal?
+  ExpFinAccting                Decimal?
+  ExpFinBanking                Decimal?
+  ExpFinInvFees                Decimal?
+  ExpFinOth                    Decimal?
+  ExpITEquipAndMaint           Decimal?
+  ExpITOth                     Decimal?
+  ExpITSoftware                Decimal?
+  ExpOtherAdminBldOcc          Decimal?
+  ExpOtherAdminLegalHROth      Decimal?
+  ExpOtherAdminMisc            Decimal?
+  ExpOtherAdminNonProgBiz      Decimal?
+  ExpOtherAdminNonProgTravMeet Decimal?
+  ExpProgramsCOGS              Decimal?
+  ExpProgramsDirProg           Decimal?
+  ExpProgramsMandE             Decimal?
+  ExpProgramsOPEX              Decimal?
+  ExpProgramsPassThrough       Decimal?
+  ExplainInKind                String?
+  ExplainNonProgRev            String?
+  ExplainPassThrough           String?
+  ExplainProgRev               String?
+  ExplainPubFund               String?
+  TransIn                      Decimal?
+  TransOut                     Decimal?
+  Source                       String?
+}
+
+model historical_outcome {
+  id             String   @id
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime
+  SubmissionYear Int?
+  OID            String?
+  ProgCode       String?
+  ProgName       String?
+  Cmt            String?
+  LT             String?
+  ST             String?
+}
+
+model historical_people_and_partner {
+  id             String           @id
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime
+  OID            String?
+  SubmissionYear Int?
+  CGcat          String?
+  ID             String?
+  Name           String?
+  Title          String?
+  Salary         Decimal?
+  EmployeePCPct  Decimal?
+  Section        String?
+  Country        String?
+  Benefits       Decimal?
+  MonthsWorked   Int?
+  SuccessionPlan String?
+  Relationship   String?
+  Email          String?
+  TopPaid        String?
+  WorkPct        Decimal?
+  OrgEmployeeMap OrgEmployeeMap[]
+}
+
+model historical_population {
+  id                  String   @id
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime
+  SubmissionYear      Int?
+  OID                 String?
+  ProgCode            String?
+  FY                  String?
+  Alumni              Int?
+  Completing          Int?
+  Continuing          Int?
+  EarlyExit           Int?
+  Notes               String?
+  PotentialApplicants Int?
+  PotentialTarget     Int?
+  ServedContinuing    Int?
+  ServedNew           Int?
+}
+
+model historical_prog_area {
+  id               String   @id
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime
+  OID              String?
+  SubmissionYear   Int?
+  ProgID           String?
+  ProgEmphasisCode String?
+  ProgAreaPct      Decimal?
+}
+
+model historical_prog_by_entity {
+  id             String   @id
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime
+  SubmissionYear Int?
+  OID            String?
+  Percent        Decimal?
+  ProgCode       String?
+  EntCode        String?
+  EcName         String?
+}
+
+model historical_program {
+  id                 String   @id
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime
+  SubmissionYear     Int?
+  OID                String?
+  ProgCode           String?
+  ProgName           String?
+  CDUs               Int?
+  CDUsource          String?
+  CDUdesc            String?
+  ProgRev            Decimal?
+  ExProgRev          String?
+  ProgDirEmp         Int?
+  DirSpend           Decimal?
+  SpendCat           String?
+  ProgPct            Decimal?
+  ProgDirVolunteers  Int?
+  Languages          String?
+  NextStep           String?
+  StartYr            Int?
+  ProgShortDesc      String?
+  ProgChallanges     String?
+  ProgSuccesses      String?
+  ProgTheoryOfChange String?
+}
+
+model historical_property {
+  id               String             @id
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime
+  SubmissionYear   Int?
+  OID              String?
+  Latitude         Float?
+  Longitude        Float?
+  Address          String?
+  PropertyName     String?
+  PropertyCode     String?
+  TitleType        String?
+  LegalEntity      String?
+  ProgCode         String?
+  UsePct           Decimal?
+  UseDesc          String?
+  SqFt             Decimal?
+  OrgPropertiesMap OrgPropertiesMap[]
+}
+
+model historical_service_area {
+  id             String          @id
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime
+  OID            String?
+  SubmissionYear Int?
+  Country        String?
+  RegionType     String?
+  RegionList     String?
+  OrgCountryMap  OrgCountryMap[]
+}
+
+model historical_single_row {
+  id                  String          @id
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime
+  SubmissionYear      Int?
+  OID                 String?
+  ContactEmail        String?
+  ContactName         String?
+  ContactPhone        String?
+  ContactPhoneType    String?
+  ContactTitle        String?
+  LegalEntitiesNo     Int?
+  GenMission          String?
+  GenMissionChanges   String?
+  GenMissionChangeYN  String?
+  GenOverallComments  String?
+  GenProgramNum       Int?
+  GenVignette         String?
+  ExplainFundRatio    String?
+  ExplainCashOnHand   String?
+  ExplainPL           String?
+  ExplainSupportRatio String?
+  OrgProgramMap       OrgProgramMap[]
+}
+
+model historical_vulnerability_matrix {
+  id              String   @id
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime
+  SubmissionYear  Int?
+  OID             String?
+  HouseholdIncome String?
+  Caregivers      String?
+  Dependants      String?
+  UniqueCount     Int?
+}
+
+model historical_vulnerability_question {
+  id             String   @id
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime
+  SubmissionYear Int?
+  OID            String?
+  VulQ           String?
+  Conf           String?
+  Name           String?
+  Percent        Decimal?
+}
+
+model supplementary_cg_distribution_history {
+  id              String   @id
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime
+  OID             String?
+  USOrgName       String?
+  OrgL2           String?
+  OrgL3           String?
+  ProgArea        String?
+  CGGrantYear     Int?
+  SubmissionYear  Int?
+  CGGrantAmt      Decimal?
+  Source          String?
+  Note            String?
+  CountryOrRegion String?
+  Region          String?
+  CurrentStatus   String?
+}
+
+model supplementary_cg_program_categorization {
+  id               String   @id
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime
+  ProgGenCode      String?
+  ProgGenDesc      String?
+  ProgCatCode      String?
+  ProgCatDesc      String?
+  ProgAreaCode     String?
+  ProgAreaDesc     String?
+  ProgEmphasisCode String?
+  ProgEmphasisDesc String?
+  FullCode         String?
+}
+
+model supplementary_org_static {
+  id              String   @id
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime
+  OID             String?
+  OIDType         String?
+  OrgName         String?
+  CountryOrRegion String?
+  CurrentStatus   String?
+}
+
+model supplementary_orgs_evaluated {
+  id             String   @id
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime
+  Count          Int?
+  SubmissionYear Int?
+  OID            String?
+  Classification String?
+  Decision       String?
+  Note           String?
+}
+
+model supplementary_us_median_salary {
+  id             String   @id
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime
+  OID            String?
+  SubmissionYear Int?
+  Section        String?
+  Name           String?
+  Code           String?
+  Title          String?
+  Salary         Decimal?
+  MonthsWorked   Int?
+  CGcat          String?
+  Country        String?
+  TopPaid        Boolean?
+  WorkPct        Decimal?
+}
+
+enum ReconType {
+  ASSET
+  LIABILITY
+  REVENUE
+  EXPENSE
+  TRANS_IN
+  TRANS_OUT
+  REVENUE_RESTRICTED
+  EXPENSE_RESTRICTED
+  EXPENSE_FUND
+  NET_ASSET
+}
+
+enum Role {
+  ADMIN
+  PARTNER_ADMIN
+  PARTNER
+  NONE
+}
