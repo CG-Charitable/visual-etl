@@ -87,6 +87,23 @@ export interface LimitNodeData {
   count: number;
 }
 
+/**
+ * An escape hatch for SQL no native node can represent (window functions,
+ * subqueries, CASE expressions, lateral-VALUES unpivots, ...) — typically
+ * populated by the SQL import wizard, one node per CTE of a pasted view.
+ * `sql` is spliced in verbatim on the backend, so it can reference sibling
+ * `sql` nodes (or real tables) by whatever names the original SQL used.
+ * `detectedColumns` starts empty and is filled in after the node is run
+ * once (see columnInference.ts) — there's no way to know a raw SQL block's
+ * output columns without asking the database.
+ */
+export interface SqlNodeData {
+  sql: string;
+  label: string;
+  dependsOn: string[];
+  detectedColumns: string[];
+}
+
 export type EtlNodeType =
   | "source"
   | "select"
@@ -94,7 +111,8 @@ export type EtlNodeType =
   | "join"
   | "aggregate"
   | "sort"
-  | "limit";
+  | "limit"
+  | "sql";
 
 export type EtlNodeData =
   | SourceNodeData
@@ -103,7 +121,8 @@ export type EtlNodeData =
   | JoinNodeData
   | AggregateNodeData
   | SortNodeData
-  | LimitNodeData;
+  | LimitNodeData
+  | SqlNodeData;
 
 export interface ColRef {
   sourceNodeId: string;
@@ -178,5 +197,7 @@ export function defaultDataFor(type: EtlNodeType): EtlNodeData {
       return { fields: [] };
     case "limit":
       return { count: 100 };
+    case "sql":
+      return { sql: "", label: "", dependsOn: [], detectedColumns: [] };
   }
 }

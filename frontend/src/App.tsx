@@ -20,7 +20,16 @@ import { SchemaBrowser } from "./components/SchemaBrowser";
 import { Inspector } from "./components/Inspector";
 import { ResultsPanel } from "./components/ResultsPanel";
 import { Login } from "./components/Login";
-import { currentUser, fetchSchema, logout, runGraph, type RunGraphResponse } from "./api";
+import { ImportSqlModal } from "./components/ImportSqlModal";
+import {
+  currentUser,
+  fetchSchema,
+  logout,
+  runGraph,
+  runGraphCount,
+  type RunGraphResponse,
+  type ImportedGraph,
+} from "./api";
 import {
   branchesFor,
   defaultDataFor,
@@ -57,6 +66,9 @@ function Canvas() {
   const [running, setRunning] = useState(false);
   const [runError, setRunError] = useState<string | null>(null);
   const [result, setResult] = useState<RunGraphResponse | null>(null);
+  const [rowCount, setRowCount] = useState<number | null>(null);
+  const [countingRows, setCountingRows] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const { screenToFlowPosition } = useReactFlow();
 
@@ -126,23 +138,46 @@ function Canvas() {
     }
   }
 
+  function graphPayload() {
+    return {
+      nodes: nodes.map((n) => ({
+        id: n.id,
+        type: n.type!,
+        data: n.data,
+        label: (n as any).label,
+      })),
+      edges: edges.map((e) => ({
+        source: e.source,
+        target: e.target,
+        sourceHandle: e.sourceHandle,
+        targetHandle: e.targetHandle,
+        kind: (e.data as any)?.kind,
+      })),
+    };
+  }
+
   async function runPreview(nodeId: string, branch: string) {
     setRunning(true);
     setRunError(null);
+    setRowCount(null);
     try {
       const res = await runGraph({
-        nodes: nodes.map((n) => ({ id: n.id, type: n.type!, data: n.data })),
-        edges: edges.map((e) => ({
-          source: e.source,
-          target: e.target,
-          sourceHandle: e.sourceHandle,
-          targetHandle: e.targetHandle,
-        })),
+        ...graphPayload(),
         targetNodeId: nodeId,
         targetHandle: branch,
         limit: 200,
       });
       setResult(res);
+      // A sql node's output columns aren't known statically — record what we
+      // just learned so downstream dropdowns (and this node's own inspector)
+      // can use them without another round trip.
+      const node = nodes.find((n) => n.id === nodeId);
+      if (node?.type === "sql") {
+        updateNodeData(nodeId, {
+          ...(node.data as any),
+          detectedColumns: res.columns.map((c) => c.outputName),
+        });
+      }
     } catch (err) {
       setRunError((err as Error).message);
       setResult(null);
@@ -151,8 +186,26 @@ function Canvas() {
     }
   }
 
+  async function runRowCount() {
+    if (!selectedId) return;
+    setCountingRows(true);
+    try {
+      const res = await runGraphCount({
+        ...graphPayload(),
+        targetNodeId: selectedId,
+        targetHandle: activeBranch,
+      });
+      setRowCount(res.count);
+    } catch (err) {
+      setRunError((err as Error).message);
+    } finally {
+      setCountingRows(false);
+    }
+  }
+
   function selectNode(nodeId: string) {
     setSelectedId(nodeId);
+    setRowCount(null);
     const node = nodes.find((n) => n.id === nodeId);
     const branches = node ? branchesFor(node.type as EtlNodeType) : [];
     const branch = branches[0]?.id ?? DEFAULT_BRANCH;
@@ -162,7 +215,45 @@ function Canvas() {
 
   function changeBranch(branch: string) {
     setActiveBranch(branch);
+    setRowCount(null);
     if (selectedId) runPreview(selectedId, branch);
+  }
+
+  function handleImported(graph: ImportedGraph) {
+    const offsetX = nodes.length > 0 ? Math.max(...nodes.map((n) => n.position.x)) + 320 : 0;
+    setNodes((nds) => [
+      ...nds,
+      ...graph.nodes.map(
+        (n) =>
+          ({
+            id: n.id,
+            type: n.type,
+            position: { x: n.position.x + offsetX, y: n.position.y },
+            data: n.data as Record<string, unknown>,
+            // Not part of React Flow's Node type — carried through verbatim
+            // by updateNodeData (which only ever touches `data`) and
+            // flattened back out in graphPayload() for the compiler.
+            label: n.label,
+          }) as unknown as Node,
+      ),
+    ]);
+    setEdges((eds) => [
+      ...eds,
+      ...graph.edges.map((e) => ({
+        id: e.id,
+        source: e.source,
+        target: e.target,
+        targetHandle: e.targetHandle,
+        sourceHandle: e.sourceHandle,
+        data: { kind: e.kind },
+        // Reference edges are visual lineage only (a real table wired into
+        // a sql node that already names it directly) — dashed to read as
+        // informational, not a real data dependency.
+        ...(e.kind === "reference"
+          ? { style: { strokeDasharray: "4 4", stroke: "#bbb" } }
+          : {}),
+      })),
+    ]);
   }
 
   function saveGraph() {
@@ -174,6 +265,8 @@ function Canvas() {
         target: e.target,
         sourceHandle: e.sourceHandle,
         targetHandle: e.targetHandle,
+        data: e.data,
+        style: e.style,
       })),
     };
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
@@ -212,6 +305,9 @@ function Canvas() {
             + {t.label}
           </button>
         ))}
+        <button className="btn" onClick={() => setImportOpen(true)}>
+          Import SQL
+        </button>
         <div className="toolbar__spacer" />
         <button className="btn" onClick={saveGraph}>
           Save pipeline
@@ -238,6 +334,7 @@ function Canvas() {
             onPaneClick={() => {
               setSelectedId(null);
               setResult(null);
+              setRowCount(null);
             }}
             fitView
           >
@@ -266,7 +363,13 @@ function Canvas() {
         error={runError}
         result={result}
         onRun={() => selectedId && runPreview(selectedId, activeBranch)}
+        rowCount={rowCount}
+        countingRows={countingRows}
+        onCountRows={runRowCount}
       />
+      {importOpen && (
+        <ImportSqlModal onClose={() => setImportOpen(false)} onImported={handleImported} />
+      )}
     </div>
   );
 }

@@ -156,6 +156,14 @@ body,
   color: #777;
   margin-top: 2px;
 }
+.etl-node__line--mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
+}
 .etl-handle {
   width: 8px;
   height: 8px;
@@ -280,6 +288,22 @@ body,
 .hint {
   font-size: 11px;
   color: #888;
+}
+
+.sql-textarea {
+  width: 100%;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11px;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  resize: vertical;
+}
+.sql-deps {
+  margin: 4px 0 0;
+  padding-left: 18px;
+  font-size: 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
 /* Buttons */
@@ -407,11 +431,65 @@ body,
   padding: 4px 8px;
   text-align: left;
   white-space: nowrap;
+  max-width: 400px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .results-panel__table th {
   background: #fafafa;
   position: sticky;
   top: 0;
+}
+
+/* Import SQL modal */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+.modal {
+  width: 640px;
+  max-width: 90vw;
+  max-height: 85vh;
+  overflow-y: auto;
+  background: #fff;
+  border-radius: 8px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25);
+}
+.modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.modal__header h2 {
+  margin: 0;
+  font-size: 16px;
+}
+.modal__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.import-dropzone {
+  border: 2px dashed #ccc;
+  border-radius: 6px;
+  padding: 4px;
+}
+.import-dropzone--active {
+  border-color: #2563eb;
+  background: #eff6ff;
+}
+.import-textarea {
+  border: none;
+  min-height: 260px;
 }
 
 /* Login */

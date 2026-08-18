@@ -5,6 +5,7 @@ import type {
   SourceNodeData,
   SelectNodeData,
   AggregateNodeData,
+  SqlNodeData,
 } from "./types";
 
 /**
@@ -104,6 +105,19 @@ export function computeNodeOutput(
             outputName: a.alias,
           })),
         ];
+        break;
+      }
+      case "sql": {
+        // Unlike every other node type, a sql node's output columns can't be
+        // computed from its config — only the database knows what a raw SQL
+        // block returns. Populated after the node is run once (see
+        // App.tsx's runPreview), empty until then.
+        const data = node.data as unknown as SqlNodeData;
+        result = (data.detectedColumns ?? []).map((name) => ({
+          sourceNodeId: id,
+          originalName: name,
+          outputName: name,
+        }));
         break;
       }
       default:

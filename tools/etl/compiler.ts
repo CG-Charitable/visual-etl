@@ -1,4 +1,6 @@
 import { getIntrospection, type TableInfo } from "./introspect.ts";
+import { assertReadOnlySql, SqlSafetyError } from "./sqlGuard.ts";
+import { describeColumns } from "./rawdb.ts";
 
 // ---------------------------------------------------------------------------
 // Graph node/data shapes (mirrored by the frontend's node config forms)
@@ -78,14 +80,43 @@ export interface LimitNodeData {
   count: number;
 }
 
-export type GraphNode =
+/**
+ * An escape hatch for SQL constructs no native node can represent (window
+ * functions, subqueries, CASE expressions, lateral-VALUES unpivots, ...).
+ * `sql` is spliced in completely verbatim as this node's CTE body — no
+ * rewriting — under the CTE name `label` instead of an auto-generated one,
+ * so it can reference sibling `sql` nodes (or real tables) by whatever
+ * names the original SQL already used. `dependsOn` is purely informational
+ * (drives which named input handles the UI shows); the compiler relies only
+ * on the graph's actual edges for ordering.
+ */
+export interface SqlNodeData {
+  sql: string;
+  label: string;
+  dependsOn: string[];
+}
+
+export type GraphNode = (
   | { id: string; type: "source"; data: SourceNodeData }
   | { id: string; type: "select"; data: SelectNodeData }
   | { id: string; type: "filter"; data: FilterNodeData }
   | { id: string; type: "join"; data: JoinNodeData }
   | { id: string; type: "aggregate"; data: AggregateNodeData }
   | { id: string; type: "sort"; data: SortNodeData }
-  | { id: string; type: "limit"; data: LimitNodeData };
+  | { id: string; type: "limit"; data: LimitNodeData }
+  | { id: string; type: "sql"; data: SqlNodeData }
+) & {
+  /**
+   * Optional custom CTE name for non-`sql` node types (sql nodes use
+   * `data.label` instead — see SqlNodeData). Set by the import pipeline
+   * when a native-mapped stage's original CTE name needs to keep resolving
+   * for an opaque sibling whose verbatim text still references it by that
+   * name. Applies only to a node's "primary" output branch (its only
+   * branch for single-output types, or a filter's "true" branch) — a
+   * secondary branch (e.g. filter's "false") always gets an auto name.
+   */
+  label?: string;
+};
 
 export interface GraphEdge {
   source: string;
@@ -94,6 +125,16 @@ export interface GraphEdge {
   sourceHandle?: string | null;
   /** Which named input of the target node this edge feeds (join only). */
   targetHandle?: string | null;
+  /**
+   * "dependency" (default when omitted) drives compilation — the source
+   * must be compiled first and is pulled into the ancestor subgraph.
+   * "reference" is visual-only lineage (e.g. the SQL importer wiring a real
+   * table's auto-created Source node into a `sql` node whose own verbatim
+   * body already names that table directly) — ignored entirely by the
+   * compiler so it doesn't generate an unused CTE or affect ordering, while
+   * still letting the Source node be clicked and previewed on its own.
+   */
+  kind?: "dependency" | "reference";
 }
 
 // The single implicit output branch for single-output node types.
@@ -130,6 +171,20 @@ export class CompileError extends Error {
 
 function quoteIdent(name: string): string {
   return `"${String(name).replace(/"/g, '""')}"`;
+}
+
+/**
+ * Wraps a verbatim `sql` node body as `"name" AS (<sql>\n)`. The trailing
+ * newline before the closing paren matters: if the pasted body's last line
+ * is a `--` comment (common — e.g. a commented-out WHERE clause left as a
+ * toggle), naively concatenating `AS (${sql})` puts the closing paren on
+ * that same commented-out line, and the comment silently swallows it —
+ * Postgres then sees an unterminated expression ("syntax error at end of
+ * input"). Adding a newline is purely about where OUR wrapper places its
+ * own paren; it doesn't touch the pasted text.
+ */
+function wrapVerbatimCte(cteName: string, sql: string): string {
+  return `${quoteIdent(cteName)} AS (${sql}\n)`;
 }
 
 function findCol(upstream: NodeOutput, name: string, nodeId: string): ColRef {
@@ -191,7 +246,16 @@ function compileSelect(
   upstream: NodeOutput,
 ): Record<string, { sql: string; columns: ColRef[] }> {
   if (node.data.mappings.length === 0) {
-    throw new CompileError(node.id, "Select node needs at least one column");
+    // Empty mappings = passthrough (mirrors Source's "empty columns = all
+    // columns"), rather than an error — used by the SQL importer to give a
+    // pure passthrough stage a labelable node without needing to already
+    // know its upstream's column list.
+    return {
+      [DEFAULT_BRANCH]: {
+        sql: `SELECT * FROM ${quoteIdent(upstreamCte)}`,
+        columns: upstream.columns,
+      },
+    };
   }
   const parts = node.data.mappings.map((m) => {
     findCol(upstream, m.from, node.id);
@@ -452,19 +516,24 @@ export async function compileGraph(
     throw new CompileError(targetNodeId, "Target node not found in graph");
   }
 
+  // "reference" edges are visual-only lineage (see GraphEdge.kind) — never
+  // real dependencies, so they're excluded before ancestor discovery even
+  // starts.
+  const dependencyEdges = edges.filter((e) => e.kind !== "reference");
+
   // Collect the ancestor-only subgraph of the target node (BFS backward).
   const ancestorIds = new Set<string>([targetNodeId]);
   const queue = [targetNodeId];
   while (queue.length) {
     const cur = queue.shift()!;
-    for (const e of edges) {
+    for (const e of dependencyEdges) {
       if (e.target === cur && !ancestorIds.has(e.source)) {
         ancestorIds.add(e.source);
         queue.push(e.source);
       }
     }
   }
-  const subEdges = edges.filter(
+  const subEdges = dependencyEdges.filter(
     (e) => ancestorIds.has(e.source) && ancestorIds.has(e.target),
   );
 
@@ -500,17 +569,76 @@ export async function compileGraph(
     return set;
   }
 
+  // Nodes with a chosen CTE name (sql nodes always; other node types
+  // optionally, via the shared `label` field) are compiled under that name
+  // instead of an auto-generated one, so verbatim `sql` node bodies
+  // elsewhere can reference them by whatever name the original SQL used.
+  // Collision check up front — never silently rename, since that would
+  // break those verbatim references.
+  const usedNames = new Map<string, string>(); // cte name -> owning nodeId
+  function registerLabel(label: string, nodeId: string): void {
+    const existing = usedNames.get(label);
+    if (existing) {
+      throw new CompileError(
+        nodeId,
+        `CTE name "${label}" is used by more than one node (also used by "${existing}")`,
+      );
+    }
+    usedNames.set(label, nodeId);
+  }
+  for (const id of order) {
+    const node = nodeMap.get(id);
+    if (!node) continue;
+    if (node.type === "sql") {
+      const label = node.data.label?.trim();
+      if (!label) throw new CompileError(node.id, "Custom SQL node needs a name");
+      registerLabel(label, node.id);
+    } else if (node.label?.trim()) {
+      registerLabel(node.label.trim(), node.id);
+    }
+  }
+
   const outputs = new Map<string, NodeOutputs>();
   const values: unknown[] = [];
   const cteParts: string[] = [];
   let counter = 0;
-  const nextCteName = () => `cte_${counter++}`;
+  const nextCteName = (ownerId: string) => {
+    let name: string;
+    do {
+      name = `n_${counter++}`;
+    } while (usedNames.has(name));
+    usedNames.set(name, ownerId);
+    return name;
+  };
 
   for (const id of order) {
     const node = nodeMap.get(id);
     if (!node) throw new CompileError(id, "Node referenced by an edge does not exist");
     const incoming = subEdges.filter((e) => e.target === id);
     const needed = neededBranches(id);
+
+    if (node.type === "sql") {
+      try {
+        assertReadOnlySql(node.data.sql, `Node "${node.id}"`);
+      } catch (e) {
+        if (e instanceof SqlSafetyError) throw new CompileError(node.id, e.message);
+        throw e;
+      }
+      const cteName = node.data.label.trim();
+      const describeSql = `WITH ${[...cteParts, wrapVerbatimCte(cteName, node.data.sql)].join(", ")} SELECT * FROM ${quoteIdent(cteName)}`;
+      // `values` already holds every parameter referenced by `cteParts` so
+      // far (e.g. a native Filter node compiled earlier) — pass it through
+      // or Postgres rejects the probe query with "there is no parameter $1".
+      const columnNames = await describeColumns(describeSql, values);
+      const columns: ColRef[] = columnNames.map((name) => ({
+        sourceNodeId: node.id,
+        originalName: name,
+        outputName: name,
+      }));
+      cteParts.push(wrapVerbatimCte(cteName, node.data.sql));
+      outputs.set(id, { [DEFAULT_BRANCH]: { cteName, columns } });
+      continue;
+    }
 
     let branchSqls: Record<string, { sql: string; columns: ColRef[] }>;
     switch (node.type) {
@@ -574,12 +702,14 @@ export async function compileGraph(
     const base = (branchSqls as any)._base as { sql: string; columns: ColRef[] } | undefined;
     let baseCteName: string | null = null;
     if (base) {
-      baseCteName = nextCteName();
+      baseCteName = nextCteName(id);
       cteParts.push(`${quoteIdent(baseCteName)} AS (${base.sql})`);
     }
     for (const [branch, { sql, columns }] of Object.entries(branchSqls)) {
       if (branch === "_base") continue;
-      const cteName = nextCteName();
+      const isPrimaryBranch = branch === DEFAULT_BRANCH || branch === "true";
+      const label = node.label?.trim();
+      const cteName = isPrimaryBranch && label ? label : nextCteName(id);
       const finalSql = baseCteName
         ? sql.replace("__BASE__", quoteIdent(baseCteName))
         : sql;

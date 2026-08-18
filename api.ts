@@ -9,6 +9,7 @@ import {
   type GraphEdge,
   type GraphNode,
 } from "./tools/etl/compiler.ts";
+import { buildImportedGraph, ImportError } from "./tools/etl/importGraph.ts";
 
 export function publicRoutes(app: Hono): void {
   app.get("/hello", (c) => c.json({ message: "Hello World" }));
@@ -48,6 +49,7 @@ export function privateRoutes(app: Hono): void {
       targetNodeId: string;
       targetHandle?: string | null;
       limit?: number;
+      mode?: "rows" | "count";
     }>();
     try {
       const compiled = await compileGraph(
@@ -56,6 +58,16 @@ export function privateRoutes(app: Hono): void {
         body.targetNodeId,
         body.targetHandle,
       );
+
+      if (body.mode === "count") {
+        const countSql = `SELECT COUNT(*)::text AS count FROM (${compiled.sql}) AS _count_sub`;
+        const rows = await prisma.$queryRawUnsafe<{ count: string }[]>(
+          countSql,
+          ...compiled.values,
+        );
+        return c.json({ count: Number(rows[0]?.count ?? 0) });
+      }
+
       const cappedLimit = Math.max(
         1,
         Math.min(Number(body.limit) || 100, 1000),
@@ -76,6 +88,23 @@ export function privateRoutes(app: Hono): void {
         return c.json({ error: e.message, nodeId: e.nodeId }, 400);
       }
       console.error("ETL run error:", e);
+      return c.json({ error: String((e as Error).message || e) }, 500);
+    }
+  });
+
+  app.post("/etl/import", async (c) => {
+    const body = await c.req.json<{ sql: string }>();
+    if (!body.sql || typeof body.sql !== "string") {
+      return c.json({ error: "Missing sql text" }, 400);
+    }
+    try {
+      const graph = await buildImportedGraph(body.sql);
+      return c.json(graph);
+    } catch (e) {
+      if (e instanceof ImportError) {
+        return c.json({ error: e.message }, 400);
+      }
+      console.error("ETL import error:", e);
       return c.json({ error: String((e as Error).message || e) }, 500);
     }
   });

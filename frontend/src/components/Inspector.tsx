@@ -14,6 +14,7 @@ import {
   type AggregateNodeData,
   type SortNodeData,
   type LimitNodeData,
+  type SqlNodeData,
   type FilterOperator,
   type AggFn,
 } from "../types";
@@ -93,6 +94,12 @@ export function Inspector({
       {node.type === "limit" && (
         <LimitForm
           data={node.data as unknown as LimitNodeData}
+          onChange={(d) => onChange(node.id, d)}
+        />
+      )}
+      {node.type === "sql" && (
+        <SqlForm
+          data={node.data as unknown as SqlNodeData}
           onChange={(d) => onChange(node.id, d)}
         />
       )}
@@ -616,6 +623,49 @@ function LimitForm({
           onChange={(e) => onChange({ count: parseInt(e.target.value, 10) || 0 })}
         />
       </label>
+    </div>
+  );
+}
+
+function SqlForm({
+  data,
+  onChange,
+}: {
+  data: SqlNodeData;
+  onChange: (d: SqlNodeData) => void;
+}) {
+  return (
+    <div className="inspector__section">
+      <label className="field">
+        <span>Name (CTE identifier)</span>
+        <input value={data.label} onChange={(e) => onChange({ ...data, label: e.target.value })} />
+      </label>
+      <label className="field">
+        <span>SQL</span>
+        <textarea
+          className="sql-textarea"
+          rows={16}
+          value={data.sql}
+          onChange={(e) => onChange({ ...data, sql: e.target.value })}
+          spellCheck={false}
+        />
+      </label>
+      <div className="field">
+        <span className="field__label">References</span>
+        {data.dependsOn.length > 0 ? (
+          <ul className="sql-deps">
+            {data.dependsOn.map((d) => (
+              <li key={d}>{d}</li>
+            ))}
+          </ul>
+        ) : (
+          <p className="hint">No detected references to other nodes — reads only from real tables/views.</p>
+        )}
+      </div>
+      <p className="hint">
+        This runs exactly as written (read-only) — edits here don't add or remove input
+        connections; rewire the diagram if you need a different set of inputs.
+      </p>
     </div>
   );
 }

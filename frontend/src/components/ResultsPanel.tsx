@@ -11,6 +11,9 @@ interface ResultsPanelProps {
   error: string | null;
   result: RunGraphResponse | null;
   onRun: () => void;
+  rowCount: number | null;
+  countingRows: boolean;
+  onCountRows: () => void;
 }
 
 export function ResultsPanel({
@@ -22,6 +25,9 @@ export function ResultsPanel({
   error,
   result,
   onRun,
+  rowCount,
+  countingRows,
+  onCountRows,
 }: ResultsPanelProps) {
   const [showSql, setShowSql] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
@@ -78,7 +84,13 @@ export function ResultsPanel({
             <button className="btn" onClick={exportCsv}>
               Export CSV (previewed rows)
             </button>
-            <span className="results-panel__count">{result.rows.length} row(s)</span>
+            <button className="btn" disabled={countingRows} onClick={onCountRows}>
+              {countingRows ? "Counting…" : "Row count"}
+            </button>
+            <span className="results-panel__count">
+              {result.rows.length} row(s) previewed
+              {rowCount !== null && ` · ${rowCount} total`}
+            </span>
           </>
         )}
         {!selectedNodeId && <span className="hint">Select a node to preview it</span>}
@@ -109,7 +121,9 @@ export function ResultsPanel({
                   {result.rows.map((row, i) => (
                     <tr key={i}>
                       {result.columns.map((c) => (
-                        <td key={c.outputName}>{formatCell(row[c.outputName])}</td>
+                        <td key={c.outputName} title={formatCell(row[c.outputName])}>
+                          {formatCell(row[c.outputName])}
+                        </td>
                       ))}
                     </tr>
                   ))}
