@@ -53,6 +53,7 @@ const ADDABLE_TYPES: { type: EtlNodeType; label: string }[] = [
   { type: "aggregate", label: "Aggregate" },
   { type: "sort", label: "Sort" },
   { type: "limit", label: "Limit" },
+  { type: "union", label: "Union" },
 ];
 
 function Canvas() {

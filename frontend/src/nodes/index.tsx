@@ -8,6 +8,7 @@ import type {
   AggregateNodeData,
   SortNodeData,
   LimitNodeData,
+  UnionNodeData,
   SqlNodeData,
 } from "../types";
 
@@ -120,6 +121,31 @@ export function LimitNode({ data, selected }: NodeProps) {
   );
 }
 
+export function UnionNode({ data, selected }: NodeProps) {
+  const d = data as unknown as UnionNodeData;
+  const namedInputs = d.inputs.map((handle, i) => ({
+    id: handle,
+    label: `in ${i + 1}`,
+    top: `${((i + 1) / (d.inputs.length + 1)) * 100}%`,
+  }));
+  return (
+    <NodeShell
+      icon="🔀"
+      title="Union"
+      selected={selected}
+      namedInputs={namedInputs}
+    >
+      <div className="etl-node__line">
+        {d.inputs.length} input{d.inputs.length === 1 ? "" : "s"} · UNION{" "}
+        {d.mode === "ALL" ? "ALL" : ""}
+      </div>
+      <div className="etl-node__sub">
+        {d.columns.length > 0 ? `${d.columns.length} output column(s)` : "(no columns mapped)"}
+      </div>
+    </NodeShell>
+  );
+}
+
 export function SqlNode({ data, selected }: NodeProps) {
   const d = data as unknown as SqlNodeData;
   const namedInputs = d.dependsOn.map((name, i) => ({
@@ -157,5 +183,6 @@ export const nodeTypes = {
   aggregate: AggregateNode,
   sort: SortNode,
   limit: LimitNode,
+  union: UnionNode,
   sql: SqlNode,
 };

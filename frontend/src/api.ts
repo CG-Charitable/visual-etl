@@ -73,7 +73,7 @@ export interface ImportedGraph {
     // Genuinely simple, single-table CTEs get mapped onto native nodes
     // (Source -> Filter -> Select -> Sort -> Limit) instead of one opaque
     // "sql" node — see tools/etl/simpleSelectParser.ts.
-    type: "sql" | "source" | "filter" | "select" | "sort" | "limit";
+    type: "sql" | "source" | "filter" | "select" | "sort" | "limit" | "union" | "join";
     position: { x: number; y: number };
     data: unknown;
     // Only set on a native chain's tail when an opaque sibling's SQL text

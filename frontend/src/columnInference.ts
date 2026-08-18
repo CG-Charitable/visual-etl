@@ -5,6 +5,7 @@ import type {
   SourceNodeData,
   SelectNodeData,
   AggregateNodeData,
+  UnionNodeData,
   SqlNodeData,
 } from "./types";
 
@@ -107,6 +108,18 @@ export function computeNodeOutput(
         ];
         break;
       }
+      case "union": {
+        // A union node's own output is exactly what its column mapping
+        // declares — like select/aggregate, it doesn't need to inspect its
+        // upstreams to know its own output shape.
+        const data = node.data as unknown as UnionNodeData;
+        result = data.columns.map((c) => ({
+          sourceNodeId: id,
+          originalName: c.to,
+          outputName: c.to,
+        }));
+        break;
+      }
       case "sql": {
         // Unlike every other node type, a sql node's output columns can't be
         // computed from its config — only the database knows what a raw SQL
@@ -164,4 +177,19 @@ export function computeJoinInputs(
       ? computeNodeOutput(rightEdge.source, nodes, edges, schema)
       : [],
   };
+}
+
+/** Every named input feeding a union node, keyed by target handle id. */
+export function computeUnionInputs(
+  nodeId: string,
+  nodes: Node[],
+  edges: Edge[],
+  schema: SchemaTable[],
+): Record<string, ColRef[]> {
+  const result: Record<string, ColRef[]> = {};
+  for (const e of edges) {
+    if (e.target !== nodeId || !e.targetHandle) continue;
+    result[e.targetHandle] = computeNodeOutput(e.source, nodes, edges, schema);
+  }
+  return result;
 }

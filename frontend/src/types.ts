@@ -88,6 +88,20 @@ export interface LimitNodeData {
 }
 
 /**
+ * N-input union (SQL UNION / UNION ALL). `inputs` lists this node's own
+ * target-handle ids in order (like Join's fixed left/right, generalized to
+ * N) — order matters because it's also the branch order in the compiled
+ * SQL. `columns[].from[handle]` names the source column on that input feeding
+ * this output column, or `null` to fill NULL for that branch (e.g. a column
+ * only one branch has). Mirrors tools/etl/compiler.ts's UnionNodeData.
+ */
+export interface UnionNodeData {
+  mode: "ALL" | "DISTINCT";
+  inputs: string[];
+  columns: { to: string; from: Record<string, string | null> }[];
+}
+
+/**
  * An escape hatch for SQL no native node can represent (window functions,
  * subqueries, CASE expressions, lateral-VALUES unpivots, ...) — typically
  * populated by the SQL import wizard, one node per CTE of a pasted view.
@@ -112,6 +126,7 @@ export type EtlNodeType =
   | "aggregate"
   | "sort"
   | "limit"
+  | "union"
   | "sql";
 
 export type EtlNodeData =
@@ -122,6 +137,7 @@ export type EtlNodeData =
   | AggregateNodeData
   | SortNodeData
   | LimitNodeData
+  | UnionNodeData
   | SqlNodeData;
 
 export interface ColRef {
@@ -197,6 +213,8 @@ export function defaultDataFor(type: EtlNodeType): EtlNodeData {
       return { fields: [] };
     case "limit":
       return { count: 100 };
+    case "union":
+      return { mode: "ALL", inputs: ["in0", "in1"], columns: [] };
     case "sql":
       return { sql: "", label: "", dependsOn: [], detectedColumns: [] };
   }

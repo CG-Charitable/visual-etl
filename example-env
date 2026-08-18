@@ -3,3 +3,5 @@ CAS_CLIENT_ID=default
 CAS_CALLBACK_URL="http://localhost/auth/callback/cas"
 PORT="80"
 DATABASE_URL=postgresql://test:test@db:5432/test_db
+# Set to "false" to disable the local username/password login route (POST /auth).
+ALLOW_LOCAL_LOGIN=true

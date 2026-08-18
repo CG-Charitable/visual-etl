@@ -2,6 +2,7 @@ import type { Node, Edge } from "@xyflow/react";
 import {
   computeUpstreamColumns,
   computeJoinInputs,
+  computeUnionInputs,
 } from "../columnInference";
 import {
   FILTER_OPERATORS,
@@ -14,6 +15,7 @@ import {
   type AggregateNodeData,
   type SortNodeData,
   type LimitNodeData,
+  type UnionNodeData,
   type SqlNodeData,
   type FilterOperator,
   type AggFn,
@@ -94,6 +96,16 @@ export function Inspector({
       {node.type === "limit" && (
         <LimitForm
           data={node.data as unknown as LimitNodeData}
+          onChange={(d) => onChange(node.id, d)}
+        />
+      )}
+      {node.type === "union" && (
+        <UnionForm
+          data={node.data as unknown as UnionNodeData}
+          nodeId={node.id}
+          nodes={nodes}
+          edges={edges}
+          schema={schema}
           onChange={(d) => onChange(node.id, d)}
         />
       )}
@@ -439,6 +451,128 @@ function JoinForm({
         output for unmatched left rows, "Both" for matched rows, and "Right" for
         unmatched right rows. Wire up just "Both" for an inner join, "Both" + "Left" for
         a left join, etc.
+      </p>
+    </div>
+  );
+}
+
+function UnionForm({
+  data,
+  nodeId,
+  nodes,
+  edges,
+  schema,
+  onChange,
+}: {
+  data: UnionNodeData;
+  nodeId: string;
+  nodes: Node[];
+  edges: Edge[];
+  schema: SchemaTable[];
+  onChange: (d: UnionNodeData) => void;
+}) {
+  const inputCols = computeUnionInputs(nodeId, nodes, edges, schema);
+
+  function addInput() {
+    let i = data.inputs.length;
+    while (data.inputs.includes(`in${i}`)) i++;
+    onChange({ ...data, inputs: [...data.inputs, `in${i}`] });
+  }
+
+  function removeInput(handle: string) {
+    onChange({
+      ...data,
+      inputs: data.inputs.filter((h) => h !== handle),
+      columns: data.columns.map((c) => {
+        const { [handle]: _removed, ...rest } = c.from;
+        return { ...c, from: rest };
+      }),
+    });
+  }
+
+  function addColumn() {
+    onChange({ ...data, columns: [...data.columns, { to: "", from: {} }] });
+  }
+
+  function removeColumn(i: number) {
+    onChange({ ...data, columns: data.columns.filter((_, idx) => idx !== i) });
+  }
+
+  return (
+    <div className="inspector__section">
+      <label className="field">
+        <span>Mode</span>
+        <select
+          value={data.mode}
+          onChange={(e) => onChange({ ...data, mode: e.target.value as "ALL" | "DISTINCT" })}
+        >
+          <option value="ALL">UNION ALL (keep duplicates)</option>
+          <option value="DISTINCT">UNION (drop duplicate rows)</option>
+        </select>
+      </label>
+
+      <span className="field__label">Inputs ({data.inputs.length})</span>
+      {data.inputs.map((handle, i) => (
+        <div key={handle} className="condition-row">
+          <span>
+            Input {i + 1} — {(inputCols[handle]?.length ?? 0)} column(s) available
+          </span>
+          {data.inputs.length > 2 && (
+            <button className="btn btn--icon" onClick={() => removeInput(handle)}>
+              ✕
+            </button>
+          )}
+        </div>
+      ))}
+      <button className="btn btn--link" onClick={addInput}>
+        + Add input
+      </button>
+
+      <span className="field__label">Output columns</span>
+      {data.columns.map((col, i) => (
+        <div key={i} className="condition-row" style={{ flexWrap: "wrap" }}>
+          <input
+            value={col.to}
+            placeholder="output name"
+            onChange={(e) => {
+              const next = [...data.columns];
+              next[i] = { ...col, to: e.target.value };
+              onChange({ ...data, columns: next });
+            }}
+          />
+          {data.inputs.map((handle, hi) => (
+            <select
+              key={handle}
+              value={col.from[handle] ?? ""}
+              onChange={(e) => {
+                const next = [...data.columns];
+                next[i] = {
+                  ...col,
+                  from: { ...col.from, [handle]: e.target.value || null },
+                };
+                onChange({ ...data, columns: next });
+              }}
+            >
+              <option value="">— NULL (in {hi + 1}) —</option>
+              {(inputCols[handle] ?? []).map((c) => (
+                <option key={c.outputName} value={c.outputName}>
+                  in {hi + 1}: {c.outputName}
+                </option>
+              ))}
+            </select>
+          ))}
+          <button className="btn btn--icon" onClick={() => removeColumn(i)}>
+            ✕
+          </button>
+        </div>
+      ))}
+      <button className="btn btn--link" onClick={addColumn}>
+        + Add output column
+      </button>
+      <p className="hint">
+        Combines every input's rows into one output. Each output column picks which
+        source column feeds it per input — leave an input as "NULL" for a column it
+        doesn't have.
       </p>
     </div>
   );

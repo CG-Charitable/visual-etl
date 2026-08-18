@@ -35,7 +35,7 @@ const WHITESPACE = /\s/;
 const IDENT_START = /[A-Za-z_]/;
 const IDENT_CONT = /[A-Za-z0-9_]/;
 
-class Scanner {
+export class Scanner {
   pos: number;
   constructor(
     public text: string,
@@ -349,6 +349,112 @@ function findTableRefs(body: string, localCteNames: Set<string>): TableRef[] {
     s.pos++;
   }
   return [...found.values()];
+}
+
+export interface UnionBranch {
+  body: string;
+  dependsOn: string[];
+  tableRefs: TableRef[];
+}
+
+export interface UnionSplit {
+  branches: UnionBranch[];
+  mode: "ALL" | "DISTINCT";
+}
+
+/** Whether `text` has a top-level (not inside parens) ORDER BY or LIMIT. */
+function hasTopLevelOrderOrLimit(text: string): boolean {
+  const s = new Scanner(text);
+  let depth = 0;
+  while (!s.eof()) {
+    if (s.consumeNonStructural()) continue;
+    const c = s.peek();
+    if (c === "(") {
+      depth++;
+      s.pos++;
+      continue;
+    }
+    if (c === ")") {
+      depth--;
+      s.pos++;
+      continue;
+    }
+    if (depth === 0 && (s.matchKeyword("ORDER") || s.matchKeyword("LIMIT"))) return true;
+    s.pos++;
+  }
+  return false;
+}
+
+/**
+ * Splits a stage's body at its top-level `UNION [ALL]` boundaries — never
+ * descending into a parenthesized subquery, so a branch that's individually
+ * parenthesized (`(SELECT ...) UNION ALL (SELECT ...)`) simply isn't found
+ * as a top-level union at all and this returns null, same as "no split
+ * needed here" (safe: the stage just falls through to the existing
+ * fully-opaque path with nothing lost). Also returns null when: there's no
+ * top-level UNION; the top-level set operator is `INTERSECT`/`EXCEPT` (not
+ * Union-shaped, out of scope); `UNION` and `UNION ALL` are mixed across
+ * branches (ambiguous which mode applies to the combined result); or the
+ * *last* branch has its own top-level `ORDER BY`/`LIMIT` — in real SQL that
+ * applies to the whole unioned result, not just the last branch, and
+ * splitting it in would silently produce the wrong combined result, so this
+ * shape bails to the opaque node rather than guess.
+ */
+export function splitTopLevelUnion(body: string, candidateNames: string[]): UnionSplit | null {
+  const s = new Scanner(body);
+  const cuts: { segmentEnd: number; nextStart: number; isAll: boolean }[] = [];
+  let depth = 0;
+  let sawOtherSetOp = false;
+  while (!s.eof()) {
+    if (s.consumeNonStructural()) continue;
+    const c = s.peek();
+    if (c === "(") {
+      depth++;
+      s.pos++;
+      continue;
+    }
+    if (c === ")") {
+      depth--;
+      s.pos++;
+      continue;
+    }
+    if (depth === 0) {
+      const before = s.pos;
+      if (s.matchKeyword("UNION")) {
+        const isAll = s.matchKeyword("ALL");
+        cuts.push({ segmentEnd: before, nextStart: s.pos, isAll });
+        continue;
+      }
+      if (s.matchKeyword("INTERSECT") || s.matchKeyword("EXCEPT")) {
+        sawOtherSetOp = true;
+        continue;
+      }
+    }
+    s.pos++;
+  }
+  if (cuts.length === 0 || sawOtherSetOp) return null;
+
+  const modes = new Set(cuts.map((c) => (c.isAll ? "ALL" : "DISTINCT")));
+  if (modes.size > 1) return null;
+
+  const texts: string[] = [];
+  let cursor = 0;
+  for (const cut of cuts) {
+    texts.push(body.slice(cursor, cut.segmentEnd).trim());
+    cursor = cut.nextStart;
+  }
+  texts.push(body.slice(cursor).trim());
+  if (texts.some((t) => t.length === 0)) return null;
+  if (hasTopLevelOrderOrLimit(texts[texts.length - 1])) return null;
+
+  const localCteNames = new Set(candidateNames);
+  const branches: UnionBranch[] = texts.map((text) => ({
+    body: text,
+    dependsOn: findReferencedNames(text, candidateNames),
+    tableRefs: findTableRefs(text, localCteNames),
+  }));
+
+  return { branches, mode: modes.has("ALL") ? "ALL" : "DISTINCT" };
 }
 
 /** Best-effort strip of a leading `CREATE [OR REPLACE] [MATERIALIZED] VIEW <name> AS`. */

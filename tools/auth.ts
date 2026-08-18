@@ -26,6 +26,21 @@ const MS_GRAPH_URL = "https://graph.microsoft.com/v1.0/me";
 
 const SESSION_TTL = 7 * 24 * 60 * 60; // 7 days in seconds
 
+// Toggles the local username/password route (POST /auth) on or off without
+// touching code — e.g. to disable it once every account has moved to
+// Google/Microsoft/CAS SSO. Enabled unless explicitly set to "false".
+const ALLOW_LOCAL_LOGIN = process.env.ALLOW_LOCAL_LOGIN !== "false";
+
+// Temporary early-access allowlist — hardcoded (not env-configurable) since
+// this is meant to come out once the app opens up beyond the two people
+// currently testing it. Applies equally to every login method (local,
+// Google, Microsoft, CAS).
+const ALLOWED_EMAILS = new Set(["matthias@cgcharitable.org", "chris@cgcharitable.org"]);
+
+function isAllowedEmail(email: string): boolean {
+  return ALLOWED_EMAILS.has(email.trim().toLowerCase());
+}
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -203,8 +218,14 @@ function checkMicrosoftEnvVars(): string[] {
 // ---------------------------------------------------------------------------
 export function setupPublicRoutes(app: Hono): void {
   app.post("/auth", async (c) => {
+    if (!ALLOW_LOCAL_LOGIN) {
+      return c.json({ error: "Username/password login is disabled" }, 403);
+    }
     try {
       const cred = await c.req.json<{ username: string; password: string }>();
+      if (!isAllowedEmail(cred.username)) {
+        return c.json({ error: "Couldn't log in" }, 403);
+      }
       if (!(cred.username in auth)) {
         await loadAuth();
       }
@@ -239,6 +260,9 @@ export function setupPublicRoutes(app: Hono): void {
         name: string;
       }>();
       const data = await verifyGoogleToken(cred.credential);
+      if (!isAllowedEmail(cred.email)) {
+        return c.json({ error: "This account is not authorized to access this app yet" }, 403);
+      }
       if (!(cred.email in auth)) {
         auth[cred.email] = { priv: 0, token: "" };
       }
@@ -335,6 +359,9 @@ export function setupPublicRoutes(app: Hono): void {
       const email = payload.email as string;
       const name = payload.name as string;
 
+      if (!isAllowedEmail(email)) {
+        return c.json({ error: "This account is not authorized to access this app yet" }, 403);
+      }
       if (!(email in auth)) {
         auth[email] = { priv: 0, token: "" };
       }
@@ -443,6 +470,9 @@ export function setupPublicRoutes(app: Hono): void {
       const email = (profile.mail || profile.userPrincipalName) as string;
       const name = profile.displayName || email;
 
+      if (!isAllowedEmail(email)) {
+        return c.json({ error: "This account is not authorized to access this app yet" }, 403);
+      }
       if (!(email in auth)) {
         auth[email] = { priv: 0, token: "" };
       }
@@ -500,6 +530,9 @@ export function setupPublicRoutes(app: Hono): void {
       }
 
       const email = user.email;
+      if (!isAllowedEmail(email)) {
+        return c.json({ error: "This account is not authorized to access this app yet" }, 403);
+      }
       if (!(email in auth)) {
         auth[email] = { priv: 0, token: "" };
       }
