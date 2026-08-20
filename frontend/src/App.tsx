@@ -21,6 +21,7 @@ import { Inspector } from "./components/Inspector";
 import { ResultsPanel } from "./components/ResultsPanel";
 import { Login } from "./components/Login";
 import { ImportSqlModal } from "./components/ImportSqlModal";
+import { SettingsModal } from "./components/SettingsModal";
 import {
   currentUser,
   fetchSchema,
@@ -70,6 +71,8 @@ function Canvas() {
   const [rowCount, setRowCount] = useState<number | null>(null);
   const [countingRows, setCountingRows] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [showSourceLines, setShowSourceLines] = useState(true);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const { screenToFlowPosition } = useReactFlow();
 
@@ -361,6 +364,13 @@ function Canvas() {
     e.target.value = "";
   }
 
+  // Reference edges (source-line lineage) can be hidden without dropping them
+  // from state — a plain `hidden` flag on the rendered edge, computed fresh
+  // each render, keeps saveGraph/onEdgesChange working off the real edges.
+  const displayEdges = showSourceLines
+    ? edges
+    : edges.map((e) => ((e.data as any)?.kind === "reference" ? { ...e, hidden: true } : e));
+
   const selectedNode = nodes.find((n) => n.id === selectedId) ?? null;
   const isCommentSelected = selectedNode?.type === "comment";
   const branches: Branch[] =
@@ -382,6 +392,9 @@ function Canvas() {
           Import SQL
         </button>
         <div className="toolbar__spacer" />
+        <button className="btn btn--icon" onClick={() => setSettingsOpen(true)} title="Settings">
+          ⚙
+        </button>
         <button className="btn" onClick={saveGraph}>
           Save pipeline
         </button>
@@ -398,7 +411,7 @@ function Canvas() {
         <div className="canvas-wrap" ref={wrapperRef} onDrop={onDrop} onDragOver={(e) => e.preventDefault()}>
           <ReactFlow
             nodes={nodes}
-            edges={edges}
+            edges={displayEdges}
             nodeTypes={nodeTypes}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
@@ -442,6 +455,13 @@ function Canvas() {
       />
       {importOpen && (
         <ImportSqlModal onClose={() => setImportOpen(false)} onImported={handleImported} />
+      )}
+      {settingsOpen && (
+        <SettingsModal
+          showSourceLines={showSourceLines}
+          onShowSourceLinesChange={setShowSourceLines}
+          onClose={() => setSettingsOpen(false)}
+        />
       )}
     </div>
   );
