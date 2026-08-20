@@ -126,12 +126,59 @@ function Canvas() {
     ]);
   }
 
+  // A comment is a canvas-only annotation, not an EtlNodeType — it's never
+  // compiled (see graphPayload), so it's added separately from addNode
+  // rather than being one more entry in ADDABLE_TYPES.
+  function addComment() {
+    const id = nextId("comment");
+    const attachedTo = selectedId ? (nodes.find((n) => n.id === selectedId) ?? null) : null;
+    let position: { x: number; y: number };
+    if (attachedTo) {
+      // Straight above with enough clearance to sit clear of the target
+      // node's own box instead of overlapping it (nodes run up to ~240px
+      // wide, ~140px tall including a comment's own header+textarea).
+      position = { x: attachedTo.position.x, y: attachedTo.position.y - 160 };
+    } else {
+      const wrapper = wrapperRef.current;
+      const center = wrapper
+        ? screenToFlowPosition({
+            x: wrapper.getBoundingClientRect().left + wrapper.clientWidth / 2,
+            y: wrapper.getBoundingClientRect().top + wrapper.clientHeight / 2,
+          })
+        : { x: 0, y: 0 };
+      position = { x: center.x + Math.random() * 60 - 30, y: center.y + Math.random() * 60 - 30 };
+    }
+    setNodes((nds) => [
+      ...nds,
+      {
+        id,
+        type: "comment",
+        position,
+        data: {
+          text: "",
+          collapsed: false,
+          attachedNodeId: attachedTo?.id ?? null,
+        } as Record<string, unknown>,
+      } satisfies Node,
+    ]);
+  }
+
   function updateNodeData(nodeId: string, data: unknown) {
     setNodes((nds) => nds.map((n) => (n.id === nodeId ? { ...n, data: data as any } : n)));
   }
 
   function deleteNode(nodeId: string) {
-    setNodes((nds) => nds.filter((n) => n.id !== nodeId));
+    setNodes((nds) =>
+      nds
+        .filter((n) => n.id !== nodeId)
+        // A comment attached to the node being deleted just goes unattached,
+        // rather than pointing at an id that no longer exists.
+        .map((n) =>
+          n.type === "comment" && (n.data as any)?.attachedNodeId === nodeId
+            ? { ...n, data: { ...(n.data as any), attachedNodeId: null } }
+            : n,
+        ),
+    );
     setEdges((eds) => eds.filter((e) => e.source !== nodeId && e.target !== nodeId));
     if (selectedId === nodeId) {
       setSelectedId(null);
@@ -140,20 +187,26 @@ function Canvas() {
   }
 
   function graphPayload() {
+    // Comments are canvas-only annotations the compiler doesn't know about
+    // — never sent as part of the pipeline being run.
+    const compileNodes = nodes.filter((n) => n.type !== "comment");
+    const compileIds = new Set(compileNodes.map((n) => n.id));
     return {
-      nodes: nodes.map((n) => ({
+      nodes: compileNodes.map((n) => ({
         id: n.id,
         type: n.type!,
         data: n.data,
         label: (n as any).label,
       })),
-      edges: edges.map((e) => ({
-        source: e.source,
-        target: e.target,
-        sourceHandle: e.sourceHandle,
-        targetHandle: e.targetHandle,
-        kind: (e.data as any)?.kind,
-      })),
+      edges: edges
+        .filter((e) => compileIds.has(e.source) && compileIds.has(e.target))
+        .map((e) => ({
+          source: e.source,
+          target: e.target,
+          sourceHandle: e.sourceHandle,
+          targetHandle: e.targetHandle,
+          kind: (e.data as any)?.kind,
+        })),
     };
   }
 
@@ -208,6 +261,12 @@ function Canvas() {
     setSelectedId(nodeId);
     setRowCount(null);
     const node = nodes.find((n) => n.id === nodeId);
+    // Comments aren't compilable — nothing to preview.
+    if (node?.type === "comment") {
+      setResult(null);
+      setRunError(null);
+      return;
+    }
     const branches = node ? branchesFor(node.type as EtlNodeType) : [];
     const branch = branches[0]?.id ?? DEFAULT_BRANCH;
     setActiveBranch(branch);
@@ -303,9 +362,9 @@ function Canvas() {
   }
 
   const selectedNode = nodes.find((n) => n.id === selectedId) ?? null;
-  const branches: Branch[] = selectedNode
-    ? branchesFor(selectedNode.type as EtlNodeType)
-    : [];
+  const isCommentSelected = selectedNode?.type === "comment";
+  const branches: Branch[] =
+    selectedNode && !isCommentSelected ? branchesFor(selectedNode.type as EtlNodeType) : [];
 
   return (
     <div className="app">
@@ -316,6 +375,9 @@ function Canvas() {
             + {t.label}
           </button>
         ))}
+        <button className="btn" onClick={addComment}>
+          + Comment
+        </button>
         <button className="btn" onClick={() => setImportOpen(true)}>
           Import SQL
         </button>
@@ -366,7 +428,7 @@ function Canvas() {
         )}
       </div>
       <ResultsPanel
-        selectedNodeId={selectedId}
+        selectedNodeId={isCommentSelected ? null : selectedId}
         branches={branches}
         activeBranch={activeBranch}
         onBranchChange={changeBranch}

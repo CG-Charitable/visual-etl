@@ -188,6 +188,86 @@ body,
   white-space: nowrap;
 }
 
+/* Comment node — a canvas-only annotation, styled as a sticky note so it
+   reads as distinct from the pipeline nodes it can be pinned to. */
+.comment-node {
+  border: 1px solid #e6d17a;
+  border-radius: 6px;
+  background: #fdf6d8;
+  /* A fixed width, not min/max — React Flow's node wrapper is absolutely
+     positioned, so with only min/max-width it shrink-wraps to the widest
+     descendant's intrinsic size, which for a nowrap+ellipsis preview line
+     is the full un-truncated text. A definite width breaks that and lets
+     the ellipsis actually take effect. */
+  width: 200px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+.comment-node--selected {
+  border-color: #c9a92c;
+  box-shadow: 0 0 0 2px rgba(201, 169, 44, 0.35);
+}
+.comment-node__header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  border-bottom: 1px solid #e6d17a;
+}
+.comment-node__icon {
+  font-size: 12px;
+}
+.comment-node__attached {
+  font-size: 10px;
+  color: #8a7423;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0; /* flex items default to min-width:auto, which ignores overflow/ellipsis */
+}
+.comment-node__toggle {
+  margin-left: auto;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 11px;
+  color: #8a7423;
+  padding: 0 2px;
+}
+.comment-node__preview {
+  padding: 6px 8px;
+  font-size: 12px;
+  color: #5c4d13;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.comment-node__textarea {
+  display: block;
+  width: 100%;
+  min-height: 60px;
+  padding: 6px 8px;
+  border: none;
+  background: transparent;
+  font-size: 12px;
+  font-family: inherit;
+  color: #5c4d13;
+  resize: vertical;
+}
+.comment-node__textarea:focus {
+  outline: none;
+}
+.comment-form__textarea {
+  width: 100%;
+  min-height: 100px;
+  padding: 6px 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 12px;
+  font-family: inherit;
+  resize: vertical;
+}
+
 /* Inspector */
 .inspector {
   width: 300px;

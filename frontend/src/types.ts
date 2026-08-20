@@ -137,6 +137,23 @@ export type EtlNodeType =
   | "union"
   | "sql";
 
+/**
+ * A free-floating canvas note, optionally pinned to another node for
+ * context. Deliberately NOT part of EtlNodeType/EtlNodeData — those mirror
+ * the backend compiler's node types 1:1, and a comment is never compiled or
+ * sent to it (see App.tsx's graphPayload, which filters "comment" nodes out
+ * before every /etl/run call).
+ */
+export interface CommentNodeData {
+  text: string;
+  collapsed: boolean;
+  attachedNodeId: string | null;
+}
+
+export function defaultCommentData(): CommentNodeData {
+  return { text: "", collapsed: false, attachedNodeId: null };
+}
+
 export type EtlNodeData =
   | SourceNodeData
   | SelectNodeData

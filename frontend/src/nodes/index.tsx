@@ -1,4 +1,5 @@
 import type { NodeProps } from "@xyflow/react";
+import { useReactFlow } from "@xyflow/react";
 import { NodeShell } from "./NodeShell";
 import type {
   SourceNodeData,
@@ -10,6 +11,7 @@ import type {
   LimitNodeData,
   UnionNodeData,
   SqlNodeData,
+  CommentNodeData,
 } from "../types";
 
 export function SourceNode({ data, selected }: NodeProps) {
@@ -175,6 +177,47 @@ export function SqlNode({ data, selected }: NodeProps) {
   );
 }
 
+export function CommentNode({ id, data, selected }: NodeProps) {
+  const d = data as unknown as CommentNodeData;
+  const { updateNodeData, getNode } = useReactFlow();
+  const attached = d.attachedNodeId ? getNode(d.attachedNodeId) : undefined;
+  const firstLine = d.text.trim().split("\n")[0]?.slice(0, 60) ?? "";
+
+  return (
+    <div className={`comment-node${selected ? " comment-node--selected" : ""}`}>
+      <div className="comment-node__header">
+        <span className="comment-node__icon">🗒️</span>
+        {attached && (
+          <span className="comment-node__attached" title={`Attached to ${attached.id}`}>
+            → {attached.type}
+          </span>
+        )}
+        <button
+          type="button"
+          className="comment-node__toggle nodrag"
+          onClick={(e) => {
+            e.stopPropagation();
+            updateNodeData(id, { collapsed: !d.collapsed });
+          }}
+          title={d.collapsed ? "Expand note" : "Collapse note"}
+        >
+          {d.collapsed ? "▸" : "▾"}
+        </button>
+      </div>
+      {d.collapsed ? (
+        <div className="comment-node__preview">{firstLine || "(empty note)"}</div>
+      ) : (
+        <textarea
+          className="comment-node__textarea nodrag nowheel"
+          value={d.text}
+          placeholder="Write a note…"
+          onChange={(e) => updateNodeData(id, { text: e.target.value })}
+        />
+      )}
+    </div>
+  );
+}
+
 export const nodeTypes = {
   source: SourceNode,
   select: SelectNode,
@@ -185,4 +228,5 @@ export const nodeTypes = {
   limit: LimitNode,
   union: UnionNode,
   sql: SqlNode,
+  comment: CommentNode,
 };

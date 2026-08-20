@@ -17,6 +17,7 @@ import {
   type LimitNodeData,
   type UnionNodeData,
   type SqlNodeData,
+  type CommentNodeData,
   type FilterOperator,
   type AggFn,
 } from "../types";
@@ -115,6 +116,63 @@ export function Inspector({
           onChange={(d) => onChange(node.id, d)}
         />
       )}
+      {node.type === "comment" && (
+        <CommentForm
+          data={node.data as unknown as CommentNodeData}
+          nodeId={node.id}
+          nodes={nodes}
+          onChange={(d) => onChange(node.id, d)}
+        />
+      )}
+    </div>
+  );
+}
+
+function CommentForm({
+  data,
+  nodeId,
+  nodes,
+  onChange,
+}: {
+  data: CommentNodeData;
+  nodeId: string;
+  nodes: Node[];
+  onChange: (d: CommentNodeData) => void;
+}) {
+  const candidates = nodes.filter((n) => n.id !== nodeId && n.type !== "comment");
+  return (
+    <div className="inspector__section">
+      <label className="field">
+        <span>Attached to</span>
+        <select
+          value={data.attachedNodeId ?? ""}
+          onChange={(e) => onChange({ ...data, attachedNodeId: e.target.value || null })}
+        >
+          <option value="">(none — free-floating)</option>
+          {candidates.map((n) => (
+            <option key={n.id} value={n.id}>
+              {n.type} · {n.id}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="field">
+        <span>Note</span>
+        <textarea
+          className="comment-form__textarea"
+          value={data.text}
+          placeholder="Write a note…"
+          onChange={(e) => onChange({ ...data, text: e.target.value })}
+        />
+      </label>
+      <label className="checkbox-row">
+        <input
+          type="checkbox"
+          checked={data.collapsed}
+          onChange={(e) => onChange({ ...data, collapsed: e.target.checked })}
+        />
+        <span>Collapsed on canvas</span>
+      </label>
     </div>
   );
 }
