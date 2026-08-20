@@ -14,25 +14,7 @@
     <button onclick="microsoftOAuth()">Microsoft Auth</button>
     <button onclick="lg()">Logout</button>
     <script>
-      const $ = (q) => document.querySelector(q);
-
-      async function main() {
-        const res = await fetch("/user", { credentials: "include" });
-        if (res.ok) {
-          window.location.replace("/tool/");
-          return;
-        }
-        let data = await res.json();
-        $("p").innerHTML = `Hello ${data.name}`;
-        await setupPrismaOOP();
-      }
-
-      function lg() {
-        logout();
-        main();
-      }
-
-      main();
+       window.location.replace("/tool/");
     </script>
   </body>
 </html>
