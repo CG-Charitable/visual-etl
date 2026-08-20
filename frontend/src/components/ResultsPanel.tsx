@@ -113,7 +113,14 @@ export function ResultsPanel({
                 <thead>
                   <tr>
                     {result.columns.map((c) => (
-                      <th key={c.outputName}>{c.outputName}</th>
+                      <th key={c.outputName}>
+                        <div>{c.outputName}</div>
+                        {c.sourceLabel && (
+                          <div className="hint" title={`Originally: ${c.sourceLabel}`}>
+                            {c.sourceLabel}
+                          </div>
+                        )}
+                      </th>
                     ))}
                   </tr>
                 </thead>

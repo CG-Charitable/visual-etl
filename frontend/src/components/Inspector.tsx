@@ -238,18 +238,25 @@ function SelectForm({
               />
               <span>{c.outputName}</span>
               {mapping && (
-                <input
-                  className="alias-input"
-                  value={mapping.to}
-                  placeholder="alias"
-                  onChange={(e) =>
-                    onChange({
-                      mappings: data.mappings.map((m) =>
-                        m.from === c.outputName ? { ...m, to: e.target.value } : m,
-                      ),
-                    })
-                  }
-                />
+                <>
+                  {mapping.sourceLabel && (
+                    <span className="hint" title={`Originally: ${mapping.sourceLabel}`}>
+                      {mapping.sourceLabel}
+                    </span>
+                  )}
+                  <input
+                    className="alias-input"
+                    value={mapping.to}
+                    placeholder="alias"
+                    onChange={(e) =>
+                      onChange({
+                        mappings: data.mappings.map((m) =>
+                          m.from === c.outputName ? { ...m, to: e.target.value } : m,
+                        ),
+                      })
+                    }
+                  />
+                </>
               )}
             </div>
           );

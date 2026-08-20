@@ -259,7 +259,17 @@ function Canvas() {
 
   function saveGraph() {
     const payload = {
-      nodes: nodes.map((n) => ({ id: n.id, type: n.type, position: n.position, data: n.data })),
+      nodes: nodes.map((n) => ({
+        id: n.id,
+        type: n.type,
+        position: n.position,
+        data: n.data,
+        // Not part of React Flow's Node type — see handleImported/graphPayload
+        // for why this is carried as a top-level sibling of `data` rather
+        // than inside it. Dropping it here breaks any sql node that
+        // references a native chain's tail CTE by this name.
+        label: (n as any).label,
+      })),
       edges: edges.map((e) => ({
         id: e.id,
         source: e.source,

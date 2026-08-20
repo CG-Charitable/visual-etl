@@ -46,7 +46,7 @@ export type ImportedNode = (
       id: string;
       type: "select";
       position: { x: number; y: number };
-      data: { mappings: { from: string; to: string }[] };
+      data: { mappings: { from: string; to: string; sourceLabel?: string }[] };
     }
   | {
       id: string;
@@ -724,6 +724,12 @@ export async function buildImportedGraph(rawSql: string): Promise<{
       const shortenMappings = entries.map((e, i) => ({
         from: tracking.get(e.alias)!.get(e.orig)!,
         to: `c${i}`,
+        // `e.alias`/`e.orig` are the table alias and column name from the
+        // moment this column first entered the chain, and never change
+        // afterwards — unlike `from`, which after the first rename is just
+        // the previous step's own `c{i}`. Carrying this forward is what lets
+        // a display label stay meaningful arbitrarily deep into the chain.
+        sourceLabel: `${e.alias}.${e.orig}`,
       }));
       chainNodes.push({
         id: shortenId,

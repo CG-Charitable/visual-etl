@@ -440,6 +440,11 @@ body,
   position: sticky;
   top: 0;
 }
+.results-panel__table th .hint {
+  font-weight: normal;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
 /* Import SQL modal */
 .modal-backdrop {

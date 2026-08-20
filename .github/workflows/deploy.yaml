@@ -1,0 +1,27 @@
+name: Deploy Backend
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@7eaf76671a0d7eec5d98ee897acda4f968735a17 # v1.2.0
+        with:
+          host: 52.8.15.97
+          username: matthias
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            export PATH="/home/matthias/.bun/bin:$PATH"
+            cd /home/matthias/Github/visual-etl
+            git pull
+            bun i
+            cd frontend
+            bun i
+            cd ..
+            bun run build:frontend
+            sudo systemctl restart visualetl.service

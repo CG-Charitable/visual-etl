@@ -14,6 +14,14 @@ export interface SourceNodeData {
 export interface SelectMapping {
   from: string;
   to: string;
+  /**
+   * Purely descriptive origin (e.g. "o.accountId"), for display only — never
+   * read by compileSelect. Populated by the join-chain importer's per-step
+   * c0/c1/... renames (see importGraph.ts), whose real `from` value is just
+   * the previous step's short synthetic name and so carries no meaning on
+   * its own.
+   */
+  sourceLabel?: string;
 }
 export interface SelectNodeData {
   mappings: SelectMapping[];
@@ -170,6 +178,9 @@ export interface ColRef {
   sourceNodeId: string;
   originalName: string;
   outputName: string;
+  /** Mirrors SelectMapping.sourceLabel — display only, carried through so a
+   * preview of the node itself can show it too. */
+  sourceLabel?: string;
 }
 interface NodeOutput {
   cteName: string;
@@ -295,6 +306,7 @@ function compileSelect(
     sourceNodeId: node.id,
     originalName: m.from,
     outputName: m.to,
+    sourceLabel: m.sourceLabel,
   }));
   return { [DEFAULT_BRANCH]: { sql, columns } };
 }

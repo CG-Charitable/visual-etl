@@ -23,6 +23,14 @@ export interface SourceNodeData {
 export interface SelectMapping {
   from: string;
   to: string;
+  /**
+   * Purely descriptive origin (e.g. "o.accountId"), for display only — never
+   * read by the compiler. Populated by the join-chain importer's per-step
+   * c0/c1/... renames (see tools/etl/importGraph.ts), whose real `from`
+   * value is just the previous step's short synthetic name and so carries
+   * no meaning on its own.
+   */
+  sourceLabel?: string;
 }
 export interface SelectNodeData {
   mappings: SelectMapping[];
@@ -144,6 +152,7 @@ export interface ColRef {
   sourceNodeId: string;
   originalName: string;
   outputName: string;
+  sourceLabel?: string;
 }
 
 export const FILTER_OPERATORS: FilterOperator[] = [
