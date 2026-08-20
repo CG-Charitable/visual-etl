@@ -22,6 +22,7 @@ import { ResultsPanel } from "./components/ResultsPanel";
 import { Login } from "./components/Login";
 import { ImportSqlModal } from "./components/ImportSqlModal";
 import { SettingsModal } from "./components/SettingsModal";
+import { ContextMenu } from "./components/ContextMenu";
 import {
   currentUser,
   fetchSchema,
@@ -73,6 +74,9 @@ function Canvas() {
   const [importOpen, setImportOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [showSourceLines, setShowSourceLines] = useState(true);
+  const [contextMenu, setContextMenu] = useState<
+    { x: number; y: number; flowPosition: { x: number; y: number }; nodeId?: string } | null
+  >(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const { screenToFlowPosition } = useReactFlow();
 
@@ -86,6 +90,33 @@ function Canvas() {
   const onConnect = useCallback(
     (connection: Connection) => setEdges((eds) => addEdge(connection, eds)),
     [setEdges],
+  );
+
+  const onPaneContextMenu = useCallback(
+    (e: React.MouseEvent | MouseEvent) => {
+      e.preventDefault();
+      const { clientX, clientY } = e as React.MouseEvent;
+      setContextMenu({
+        x: clientX,
+        y: clientY,
+        flowPosition: screenToFlowPosition({ x: clientX, y: clientY }),
+      });
+    },
+    [screenToFlowPosition],
+  );
+
+  const onNodeContextMenu = useCallback(
+    (e: React.MouseEvent, node: Node) => {
+      e.preventDefault();
+      if (node.type === "comment") return;
+      setContextMenu({
+        x: e.clientX,
+        y: e.clientY,
+        flowPosition: screenToFlowPosition({ x: e.clientX, y: e.clientY }),
+        nodeId: node.id,
+      });
+    },
+    [screenToFlowPosition],
   );
 
   const onDrop = useCallback(
@@ -132,15 +163,21 @@ function Canvas() {
   // A comment is a canvas-only annotation, not an EtlNodeType — it's never
   // compiled (see graphPayload), so it's added separately from addNode
   // rather than being one more entry in ADDABLE_TYPES.
-  function addComment() {
+  // `opts` lets the right-click context menu override where/what a comment
+  // attaches to; a plain call (the toolbar "+ Comment" button) keeps the
+  // original behavior of attaching to whatever's currently selected.
+  function addComment(opts?: { position?: { x: number; y: number }; attachedNodeId?: string }) {
     const id = nextId("comment");
-    const attachedTo = selectedId ? (nodes.find((n) => n.id === selectedId) ?? null) : null;
+    const targetId = opts ? opts.attachedNodeId : (selectedId ?? undefined);
+    const attachedTo = targetId ? (nodes.find((n) => n.id === targetId) ?? null) : null;
     let position: { x: number; y: number };
     if (attachedTo) {
       // Straight above with enough clearance to sit clear of the target
       // node's own box instead of overlapping it (nodes run up to ~240px
       // wide, ~140px tall including a comment's own header+textarea).
       position = { x: attachedTo.position.x, y: attachedTo.position.y - 160 };
+    } else if (opts?.position) {
+      position = opts.position;
     } else {
       const wrapper = wrapperRef.current;
       const center = wrapper
@@ -422,6 +459,9 @@ function Canvas() {
               setResult(null);
               setRowCount(null);
             }}
+            onPaneContextMenu={onPaneContextMenu}
+            onNodeContextMenu={onNodeContextMenu}
+            onMoveStart={() => setContextMenu(null)}
             fitView
           >
             <Background />
@@ -461,6 +501,24 @@ function Canvas() {
           showSourceLines={showSourceLines}
           onShowSourceLinesChange={setShowSourceLines}
           onClose={() => setSettingsOpen(false)}
+        />
+      )}
+      {contextMenu && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          onClose={() => setContextMenu(null)}
+          items={[
+            {
+              label: "Add comment",
+              onClick: () =>
+                addComment(
+                  contextMenu.nodeId
+                    ? { attachedNodeId: contextMenu.nodeId }
+                    : { position: contextMenu.flowPosition },
+                ),
+            },
+          ]}
         />
       )}
     </div>

@@ -25,3 +25,4 @@ jobs:
             cd ..
             bun run build:frontend
             sudo systemctl restart visualetl.service
+            /home/matthias/Github/gchatnotify_chat.py "Visual ETL deployed successfully"

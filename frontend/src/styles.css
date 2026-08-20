@@ -526,6 +526,36 @@ body,
   text-overflow: ellipsis;
 }
 
+/* Context menu */
+.context-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+}
+.context-menu {
+  position: absolute;
+  min-width: 160px;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+}
+.context-menu__item {
+  background: none;
+  border: none;
+  text-align: left;
+  padding: 6px 10px;
+  font-size: 12px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.context-menu__item:hover {
+  background: #f0f0f0;
+}
+
 /* Import SQL modal */
 .modal-backdrop {
   position: fixed;
